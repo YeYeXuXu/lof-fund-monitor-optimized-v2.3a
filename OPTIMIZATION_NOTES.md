@@ -1,10 +1,4 @@
-# 净值估值模型优化v2.3L 说明
-
-## v2.3L AkShare 非 ETF 自动新增基金
-
-- 新增 `akshare_fund_adapter.fetch_akshare_listed_fund_daily()`，按 AkShare `fund_etf_fund_daily_em` 的同源页面解析场内交易基金表，获取 `市价` 与 `折价率`。
-- 新增 `build_akshare_auto_default_funds()`，只选择同时满足“`fund_etf_fund_daily_em` 有直接折价率、`fund_value_estimation_em` 有估算值、且不是 ETF”的基金。
-- `update_all_funds()` 每轮 AkShare 快照后会自动写入这些非 ETF 基金，再重新加载基金列表继续刷新；已有用户基金和持仓缓存不被删除。
+# 净值估值模型优化v2.6L 说明
 
 ## 1. 原项目净值估算逻辑审查
 
@@ -27,7 +21,7 @@
 
 结论：原项目可以作为“简化行情提醒”使用，但其持仓估算法并不完全符合基金净值估算的资产权重逻辑。主要偏差来自把披露持仓样本归一化到 100% 资产，以及对境外基金残差资产的假设过强。
 
-## 2. 净值估值模型优化v2.3L 设计
+## 2. 净值估值模型优化v2.6L 设计
 
 统一估值公式：
 
@@ -76,7 +70,7 @@
 
 优化后的估值结果统一返回并保存：
 
-- `model_version`：固定为 `净值估值模型优化v2.3L`。
+- `model_version`：固定为 `净值估值模型优化v2.6L`。
 - `valuation_method`：估值路径，例如 `holdings_plus_proxy`、`index_proxy`、`overseas_holdings_plus_proxy`、`fund_api_fallback`。
 - `valuation_confidence`：0 到 1 的置信度评分。
 - `valuation_note`：估值说明。
@@ -97,7 +91,7 @@
 微信阈值告警消息新增版本号：
 
 ```text
-净值估值模型优化v2.3L
+净值估值模型优化v2.6L
 ```
 
 位置：

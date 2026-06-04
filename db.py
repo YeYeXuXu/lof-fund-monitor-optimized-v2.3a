@@ -303,7 +303,7 @@ async def init_db():
             except Exception:
                 pass  # Column already exists
 
-        # v2.3L compatibility: older threshold alerts could be scheduled even
+        # v2.6L compatibility: older threshold alerts could be scheduled even
         # when push_enabled was 0. Preserve those existing alert schedules while
         # no longer allowing push_enabled to trigger any summary push.
         await db.execute("""
@@ -432,31 +432,62 @@ async def get_holdings(fund_code: str):
         await db.close()
 
 
+async def get_all_holdings_map() -> dict[str, list[dict]]:
+    """Return all domestic holdings grouped by fund_code in one DB query."""
+    db = await get_db()
+    try:
+        cursor = await db.execute("SELECT * FROM fund_holdings ORDER BY fund_code, holding_ratio DESC")
+        rows = await cursor.fetchall()
+        grouped: dict[str, list[dict]] = {}
+        for row in rows:
+            item = dict(row)
+            grouped.setdefault(item.get("fund_code", ""), []).append(item)
+        return grouped
+    finally:
+        await db.close()
+
+
+_REALTIME_UPSERT_SQL = """INSERT OR REPLACE INTO fund_realtime
+            (fund_code, nav, nav_date, estimated_nav, estimated_change_rate, trade_price, trade_price_change, trade_amount, premium_rate, purchase_status, redeem_status, yesterday_purchase_shares, index_name, overseas_period, cn_ratio, us_ratio, us_index_name, model_version, valuation_method, valuation_confidence, valuation_note, coverage_ratio, target_exposure, residual_ratio, source_estimated_nav, source_estimated_change_rate, source_estimate_time, akshare_source, akshare_premium_rate, iopv_estimated_nav, nav_source, estimate_source, price_source, trade_amount_source, premium_source, premium_base_nav, premium_base_source, status_source, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"""
+
+
+def _realtime_values(fund_code: str, data: dict) -> tuple:
+    return (fund_code, data.get("nav", 0), data.get("nav_date", ""), data.get("estimated_nav", 0),
+            data.get("estimated_change_rate", 0), data.get("trade_price", 0), data.get("trade_price_change", 0),
+            data.get("trade_amount", 0),
+            data.get("premium_rate", 0), data.get("purchase_status", "开放"), data.get("redeem_status", "开放"),
+            data.get("yesterday_purchase_shares", 0), data.get("index_name", ""),
+            data.get("overseas_period", 0), data.get("cn_ratio", 0), data.get("us_ratio", 0),
+            data.get("us_index_name", ""), data.get("model_version", ""),
+            data.get("valuation_method", ""), data.get("valuation_confidence", 0),
+            data.get("valuation_note", ""), data.get("coverage_ratio", 0),
+            data.get("target_exposure", 0), data.get("residual_ratio", 0),
+            data.get("source_estimated_nav", 0), data.get("source_estimated_change_rate", 0),
+            data.get("source_estimate_time", ""), data.get("akshare_source", ""),
+            data.get("akshare_premium_rate"), data.get("iopv_estimated_nav", 0),
+            data.get("nav_source", ""), data.get("estimate_source", ""),
+            data.get("price_source", ""), data.get("trade_amount_source", ""),
+            data.get("premium_source", ""), data.get("premium_base_nav", 0),
+            data.get("premium_base_source", ""), data.get("status_source", ""))
+
+
 async def save_realtime(fund_code: str, data: dict):
     db = await get_db()
     try:
-        await db.execute(
-            """INSERT OR REPLACE INTO fund_realtime
-            (fund_code, nav, nav_date, estimated_nav, estimated_change_rate, trade_price, trade_price_change, trade_amount, premium_rate, purchase_status, redeem_status, yesterday_purchase_shares, index_name, overseas_period, cn_ratio, us_ratio, us_index_name, model_version, valuation_method, valuation_confidence, valuation_note, coverage_ratio, target_exposure, residual_ratio, source_estimated_nav, source_estimated_change_rate, source_estimate_time, akshare_source, akshare_premium_rate, iopv_estimated_nav, nav_source, estimate_source, price_source, trade_amount_source, premium_source, premium_base_nav, premium_base_source, status_source, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
-            (fund_code, data.get("nav", 0), data.get("nav_date", ""), data.get("estimated_nav", 0),
-             data.get("estimated_change_rate", 0), data.get("trade_price", 0), data.get("trade_price_change", 0),
-             data.get("trade_amount", 0),
-             data.get("premium_rate", 0), data.get("purchase_status", "开放"), data.get("redeem_status", "开放"),
-             data.get("yesterday_purchase_shares", 0), data.get("index_name", ""),
-             data.get("overseas_period", 0), data.get("cn_ratio", 0), data.get("us_ratio", 0),
-             data.get("us_index_name", ""), data.get("model_version", ""),
-             data.get("valuation_method", ""), data.get("valuation_confidence", 0),
-             data.get("valuation_note", ""), data.get("coverage_ratio", 0),
-             data.get("target_exposure", 0), data.get("residual_ratio", 0),
-             data.get("source_estimated_nav", 0), data.get("source_estimated_change_rate", 0),
-             data.get("source_estimate_time", ""), data.get("akshare_source", ""),
-             data.get("akshare_premium_rate"), data.get("iopv_estimated_nav", 0),
-             data.get("nav_source", ""), data.get("estimate_source", ""),
-             data.get("price_source", ""), data.get("trade_amount_source", ""),
-             data.get("premium_source", ""), data.get("premium_base_nav", 0),
-             data.get("premium_base_source", ""), data.get("status_source", ""))
-        )
+        await db.execute(_REALTIME_UPSERT_SQL, _realtime_values(fund_code, data))
+        await db.commit()
+    finally:
+        await db.close()
+
+
+async def save_realtime_many(items: list[tuple[str, dict]]) -> None:
+    """Batch-save realtime rows in one SQLite transaction."""
+    if not items:
+        return
+    db = await get_db()
+    try:
+        await db.executemany(_REALTIME_UPSERT_SQL, [_realtime_values(code, data) for code, data in items])
         await db.commit()
     finally:
         await db.close()
@@ -609,6 +640,21 @@ async def get_overseas_holdings(fund_code: str):
         cursor = await db.execute("SELECT * FROM fund_overseas_holdings WHERE fund_code = ? ORDER BY holding_ratio DESC", (fund_code,))
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
+    finally:
+        await db.close()
+
+
+async def get_all_overseas_holdings_map() -> dict[str, list[dict]]:
+    """Return all overseas holdings grouped by fund_code in one DB query."""
+    db = await get_db()
+    try:
+        cursor = await db.execute("SELECT * FROM fund_overseas_holdings ORDER BY fund_code, holding_ratio DESC")
+        rows = await cursor.fetchall()
+        grouped: dict[str, list[dict]] = {}
+        for row in rows:
+            item = dict(row)
+            grouped.setdefault(item.get("fund_code", ""), []).append(item)
+        return grouped
     finally:
         await db.close()
 

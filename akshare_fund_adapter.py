@@ -12,10 +12,12 @@ Embedded AkShare methods:
 - ``fund_lof_spot_em``: EastMoney LOF spot list.  AkShare v1.18.64 exposes
   quote/turnover fields here but not f402/f441, so LOF premium/discount should
   be locally calculated from price and the best available estimated NAV.
-- ``fund_etf_fund_daily_em``: EastMoney/Tiantian listed-fund daily page.  Despite
-  the AkShare method name, this table contains ETF and non-ETF listed funds;
-  v2.3L uses its direct ``折价率`` field only for non-ETF auto-added funds.
 - ``fund_value_estimation_em``: EastMoney fund valuation list.
+- ``fund_etf_fund_daily_em``: EastMoney exchange-traded fund NAV table.
+  Despite the AkShare method name, the table contains both ETF and non-ETF
+  exchange-traded funds; this adapter keeps only non-ETF rows and uses its
+  direct ``折价率`` field together with ``fund_value_estimation_em`` to discover
+  funds that can be monitored without a holdings-based valuation model.
 - ``fund_purchase_em``: EastMoney/Tiantian batch purchase/redemption status and
   latest official NAV.
 
@@ -48,6 +50,7 @@ AKSHARE_RETRY_SLEEP_SECONDS = max(0.1, float(os.environ.get("AKSHARE_FUND_RETRY_
 AKSHARE_PAGE_SIZE = max(100, int(os.environ.get("AKSHARE_FUND_PAGE_SIZE", "5000") or 5000))
 AKSHARE_ESTIMATION_TIMEOUT_SECONDS = max(2.0, float(os.environ.get("AKSHARE_FUND_ESTIMATION_TIMEOUT", "8") or 8))
 AKSHARE_ESTIMATION_PAGE_SIZE = max(1000, int(os.environ.get("AKSHARE_FUND_ESTIMATION_PAGE_SIZE", "20000") or 20000))
+AKSHARE_EXCHANGE_DAILY_TIMEOUT_SECONDS = max(3, int(os.environ.get("AKSHARE_EXCHANGE_DAILY_TIMEOUT", "8") or 8))
 
 HEADERS_QUOTE = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -79,10 +82,7 @@ _LOF_SPOT_URLS = (
 
 _FUND_VALUE_ESTIMATION_URL = "https://api.fund.eastmoney.com/FundGuZhi/GetFundGZList"
 _FUND_PURCHASE_STATUS_URL = "https://fund.eastmoney.com/Data/Fund_JJJZ_Data.aspx"
-_LISTED_FUND_DAILY_URLS = (
-    "https://fund.eastmoney.com/cnjy_dwjz.html",
-    "http://fund.eastmoney.com/cnjy_dwjz.html",
-)
+_FUND_EXCHANGE_DAILY_URL = "https://fund.eastmoney.com/cnjy_dwjz.html"
 
 _COMMON_CLIST_PARAMS = {
     "pn": "1",
@@ -189,31 +189,57 @@ def _normalize_code(value: Any) -> str:
     return text
 
 
-def _clean_fund_name(value: Any) -> str:
-    text = re.sub(r"\s+", "", str(value or "").strip())
-    for suffix in ("行情吧档案", "基金吧档案", "行情吧", "基金吧", "档案", "行情"):
+
+
+def _market_from_fund_code(code: str) -> str:
+    """Infer the exchange used by EastMoney quote secid from a fund code."""
+    code = _normalize_code(code)
+    # Shanghai exchange funds normally start with 5; Shenzhen exchange funds
+    # normally start with 1.  Keep Shenzhen as the conservative default for
+    # legacy LOF/fund codes.
+    return "sh" if code.startswith("5") else "sz"
+
+
+def _clean_akshare_fund_name(value: Any) -> str:
+    """Clean display text copied from EastMoney table cells."""
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    text = re.sub(r"\s+", "", text)
+    for suffix in ("行情吧档案", "行情吧", "档案"):
         text = text.replace(suffix, "")
+    # The source table often appends a quote-page link text.  Remove only a
+    # terminal marker so names like “行情” in the middle are left intact.
+    text = re.sub(r"行情$", "", text)
     return text.strip()
 
 
-def _market_from_code(code: str) -> str:
-    code = _normalize_code(code)
-    return "sh" if code.startswith(("5", "6")) else "sz"
+def _is_etf_like(fund_name: Any, fund_type: Any = "") -> bool:
+    """Return True for ETF rows that should be excluded by v2.6L discovery."""
+    text = f"{fund_name or ''} {fund_type or ''}".upper()
+    compact = re.sub(r"\s+", "", text)
+    return "ETF" in compact or "交易型开放式指数" in compact
 
 
-def _is_etf_fund(name: Any = "", fund_type: Any = "") -> bool:
-    text = f"{name or ''} {fund_type or ''}".upper()
-    return "ETF" in text
+def _guess_fund_category(fund_name: Any, fund_type: Any = "") -> str:
+    """Best-effort category for newly discovered funds.
+
+    The monitor's direct AkShare estimate path does not require holdings, but
+    preserving category helps the existing UI filters and fallback estimators.
+    """
+    text = f"{fund_name or ''} {fund_type or ''}"
+    if any(keyword in text for keyword in (
+        "QDII", "全球", "海外", "美国", "纳斯达克", "纳指", "标普",
+        "德国", "法国", "日本", "日经", "印度", "越南", "原油", "油气",
+    )):
+        return "overseas"
+    if any(keyword in text for keyword in ("香港", "港股", "恒生", "中概", "恒指")):
+        return "hk"
+    return "domestic"
 
 
-def _decode_response_bytes(raw: bytes, fallback: str = "gb18030") -> str:
-    for encoding in (fallback, "gbk", "gb2312", "utf-8"):
-        try:
-            return raw.decode(encoding)
-        except UnicodeDecodeError:
-            continue
-    return raw.decode(fallback, errors="ignore")
-
+def _default_algo_for_category(category: str) -> str:
+    return "overseas" if category == "overseas" else "holdings"
 
 def _format_data_date(value: Any) -> str:
     text = str(value or "").strip()
@@ -623,6 +649,166 @@ async def fetch_akshare_fund_value_estimation(
         logger.warning("AkShare adapter fund_value_estimation_em(%s) unavailable: %s", symbol, _fmt_exc(exc))
         return {}
 
+
+
+def _find_exchange_daily_table_rows(html: str) -> list[tuple[list[str], list[str]]]:
+    """Return (header, row) pairs for the AkShare fund_etf_fund_daily_em table.
+
+    AkShare implements this method with pandas.read_html.  The monitor avoids a
+    pandas dependency, so this parser locates the same table by its visible
+    column names and aligns data rows even when EastMoney prepends rank/blank
+    columns before “基金代码”.
+    """
+    soup = BeautifulSoup(html or "", "lxml")
+    pairs: list[tuple[list[str], list[str]]] = []
+    for table in soup.find_all("table"):
+        parsed_rows: list[list[str]] = []
+        for tr in table.find_all("tr"):
+            cells = [cell.get_text(" ", strip=True) for cell in tr.find_all(["th", "td"])]
+            cells = [re.sub(r"\s+", " ", cell).strip() for cell in cells]
+            if any(cells):
+                parsed_rows.append(cells)
+        if not parsed_rows:
+            continue
+
+        for header_index, row in enumerate(parsed_rows):
+            header = [cell.strip() for cell in row]
+            if not ({"基金代码", "基金简称", "类型", "市价", "折价率"} <= set(header)):
+                continue
+            for data_row in parsed_rows[header_index + 1:]:
+                if any(cell in {"基金代码", "基金简称"} for cell in data_row):
+                    continue
+                pairs.append((header, data_row))
+            if pairs:
+                return pairs
+    return pairs
+
+
+def _value_by_header(header: list[str], row: list[str], name: str, *, code_offset: int = 0) -> str:
+    try:
+        idx = header.index(name) + code_offset
+    except ValueError:
+        return ""
+    if 0 <= idx < len(row):
+        return str(row[idx] or "").strip()
+    return ""
+
+
+def _normalize_exchange_daily_rows(pairs: list[tuple[list[str], list[str]]]) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for header, row in pairs:
+        header_code_index = header.index("基金代码") if "基金代码" in header else 0
+        code_candidates: list[tuple[int, str]] = []
+        for idx, cell in enumerate(row):
+            code = _normalize_code(cell)
+            if re.fullmatch(r"\d{6}", code):
+                code_candidates.append((idx, code))
+        if not code_candidates:
+            continue
+        code_idx, code = min(code_candidates, key=lambda item: abs(item[0] - header_code_index))
+        code_offset = code_idx - header_code_index
+        fund_name = _clean_akshare_fund_name(_value_by_header(header, row, "基金简称", code_offset=code_offset))
+        fund_type = _value_by_header(header, row, "类型", code_offset=code_offset)
+        if not code or _is_etf_like(fund_name, fund_type):
+            continue
+
+        trade_price = _to_float(_value_by_header(header, row, "市价", code_offset=code_offset), 0.0)
+        discount_rate = _to_float_or_none(_value_by_header(header, row, "折价率", code_offset=code_offset))
+        signed_premium_rate = _akshare_discount_to_signed_premium(discount_rate)
+        if signed_premium_rate is None:
+            continue
+
+        result[code] = {
+            "fund_code": code,
+            "fund_name": fund_name,
+            "fund_type": fund_type,
+            "market": _market_from_fund_code(code),
+            "trade_price": trade_price,
+            "fund_discount_rate": discount_rate,
+            "premium_rate": signed_premium_rate,
+            "source": "akshare.fund_etf_fund_daily_em:非ETF场内交易基金",
+        }
+    return result
+
+
+async def fetch_akshare_exchange_daily_snapshot(
+    session: aiohttp.ClientSession,
+) -> dict[str, dict[str, Any]]:
+    """Fetch non-ETF exchange-traded fund rows with direct discount-rate data.
+
+    This mirrors AkShare ``fund_etf_fund_daily_em`` but intentionally filters out
+    ETF rows.  The remaining rows are useful for v2.6L auto-add because the table
+    supplies a direct ``折价率`` field, while ``fund_value_estimation_em`` supplies
+    the direct estimated NAV.
+    """
+    try:
+        async with session.get(
+            _FUND_EXCHANGE_DAILY_URL,
+            headers=HEADERS_FUND,
+            timeout=aiohttp.ClientTimeout(total=AKSHARE_EXCHANGE_DAILY_TIMEOUT_SECONDS),
+        ) as resp:
+            raw = await resp.read()
+            if resp.status != 200:
+                raise RuntimeError(f"HTTP {resp.status}: {raw[:120]!r}")
+        html = ""
+        for encoding in ("gb18030", "gb2312", "utf-8"):
+            try:
+                html = raw.decode(encoding, errors="ignore")
+                if "基金代码" in html or "折价率" in html:
+                    break
+            except Exception:
+                continue
+        pairs = _find_exchange_daily_table_rows(html)
+        result = _normalize_exchange_daily_rows(pairs)
+        logger.info(
+            "AkShare adapter fund_etf_fund_daily_em non-ETF rows fetched: %s",
+            len(result),
+        )
+        return result
+    except Exception as exc:
+        logger.warning("AkShare adapter fund_etf_fund_daily_em non-ETF snapshot unavailable: %s", _fmt_exc(exc))
+        return {}
+
+
+def build_akshare_addable_funds(snapshot: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Build default-fund rows that can be monitored directly by AkShare.
+
+    Eligibility for v2.6L:
+    - appears in the non-ETF subset of AkShare ``fund_etf_fund_daily_em`` and has
+      a direct ``折价率`` value;
+    - also appears in ``fund_value_estimation_em`` with a positive estimated NAV;
+    - is not present in the ETF realtime quote list.
+    """
+    snapshot = snapshot or {}
+    exchange_daily: dict[str, dict[str, Any]] = snapshot.get("exchange_daily") or {}
+    estimation: dict[str, dict[str, Any]] = snapshot.get("estimation") or {}
+    etf_codes = set((snapshot.get("etf_spot") or {}).keys())
+
+    funds: list[dict[str, Any]] = []
+    for code in sorted(exchange_daily):
+        row = exchange_daily.get(code) or {}
+        est = estimation.get(code) or {}
+        if code in etf_codes:
+            continue
+        if _is_etf_like(row.get("fund_name", ""), row.get("fund_type", "")):
+            continue
+        if row.get("premium_rate") is None:
+            continue
+        if _to_float(est.get("estimated_nav"), 0.0) <= 0:
+            continue
+        fund_name = _clean_akshare_fund_name(row.get("fund_name") or est.get("fund_name") or code)
+        category = _guess_fund_category(fund_name, row.get("fund_type", ""))
+        funds.append({
+            "fund_code": code,
+            "fund_name": fund_name,
+            "market": row.get("market") or _market_from_fund_code(code),
+            "algo_type": _default_algo_for_category(category),
+            "category": category,
+            "industry_index_code": "",
+            "us_index_code": "",
+        })
+    return funds
+
 async def fetch_akshare_fund_purchase_status(
     session: aiohttp.ClientSession,
 ) -> dict[str, dict[str, Any]]:
@@ -714,217 +900,6 @@ async def fetch_akshare_fund_purchase_status(
         return {}
 
 
-def _parse_akshare_listed_fund_daily_html(text: str) -> dict[str, dict[str, Any]]:
-    """Parse the HTML table used by AkShare ``fund_etf_fund_daily_em``.
-
-    AkShare reads the GB2312 EastMoney/Tiantian page with ``pandas.read_html``.
-    The monitor avoids adding pandas by scanning the same table for rows whose
-    first fund-code-looking cell is followed by the AkShare column order:
-    基金代码、基金简称、类型、当日单位净值、当日累计净值、前日单位净值、前日累计净值、增长值、增长率、市价、折价率。
-    """
-    if not text:
-        return {}
-
-    try:
-        soup = BeautifulSoup(text, "lxml")
-    except Exception:
-        soup = BeautifulSoup(text, "html.parser")
-
-    selected_rows: list[list[str]] = []
-    for table in soup.find_all("table"):
-        rows: list[list[str]] = []
-        for tr in table.find_all("tr"):
-            cells = [cell.get_text("", strip=True) for cell in tr.find_all(["td", "th"])]
-            cells = [cell for cell in cells if cell != ""]
-            if cells:
-                rows.append(cells)
-        flat = " ".join(" ".join(row) for row in rows)
-        if "基金代码" in flat and "基金简称" in flat and "折价率" in flat and "市价" in flat:
-            selected_rows = rows
-            break
-
-    if not selected_rows:
-        return {}
-
-    result: dict[str, dict[str, Any]] = {}
-    for cells in selected_rows:
-        code_index = next((idx for idx, cell in enumerate(cells) if re.fullmatch(r"\d{6}", cell or "")), None)
-        if code_index is None:
-            continue
-        values = cells[code_index:code_index + 11]
-        if len(values) < 11:
-            continue
-        code, raw_name, fund_type = values[0], values[1], values[2]
-        fund_name = _clean_fund_name(raw_name)
-        current_nav = _to_float(values[3], 0.0)
-        cumulative_nav = _to_float(values[4], 0.0)
-        previous_nav = _to_float(values[5], 0.0)
-        previous_cumulative_nav = _to_float(values[6], 0.0)
-        daily_change_value = _to_float(values[7], 0.0)
-        daily_change_rate = _to_float(values[8], 0.0)
-        trade_price = _to_float(values[9], 0.0)
-        discount_rate = _to_float_or_none(values[10])
-        signed_premium_rate = _akshare_discount_to_signed_premium(discount_rate)
-        result[code] = {
-            "fund_code": code,
-            "fund_name": fund_name,
-            "fund_type": str(fund_type or "").strip(),
-            "market": _market_from_code(code),
-            "nav": current_nav,
-            "cumulative_nav": cumulative_nav,
-            "previous_nav": previous_nav,
-            "previous_cumulative_nav": previous_cumulative_nav,
-            "daily_change_value": daily_change_value,
-            "daily_change_rate": daily_change_rate,
-            "trade_price": trade_price,
-            "fund_discount_rate": discount_rate,
-            "premium_rate": signed_premium_rate,
-            "is_etf": _is_etf_fund(fund_name, fund_type),
-            "source": "akshare.fund_etf_fund_daily_em",
-        }
-    return result
-
-
-async def fetch_akshare_listed_fund_daily(session: aiohttp.ClientSession) -> dict[str, dict[str, Any]]:
-    """Fetch AkShare ``fund_etf_fund_daily_em`` without pandas.
-
-    The method name includes ETF for historical AkShare reasons, but the source
-    page is the broader listed-fund table.  v2.3L keeps ETF behavior unchanged
-    and uses this table to discover non-ETF funds with a direct discount-rate
-    field.
-    """
-    last_error = ""
-    for url in _LISTED_FUND_DAILY_URLS:
-        try:
-            async with session.get(
-                url,
-                headers=HEADERS_FUND,
-                timeout=aiohttp.ClientTimeout(total=AKSHARE_HTTP_TIMEOUT),
-            ) as resp:
-                raw = await resp.read()
-                if resp.status != 200:
-                    last_error = f"HTTP {resp.status}: {raw[:120]!r}"
-                    continue
-                text = _decode_response_bytes(raw, "gb18030")
-                result = _parse_akshare_listed_fund_daily_html(text)
-                if result:
-                    non_etf_count = sum(1 for item in result.values() if not item.get("is_etf"))
-                    logger.info(
-                        "AkShare adapter fund_etf_fund_daily_em fetched %s rows (%s non-ETF) via %s",
-                        len(result),
-                        non_etf_count,
-                        url,
-                    )
-                    return result
-                last_error = "no listed-fund rows parsed"
-        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
-            last_error = _fmt_exc(exc)
-            logger.debug("AkShare adapter fund_etf_fund_daily_em failed via %s: %s", url, last_error)
-    if last_error:
-        logger.warning("AkShare adapter fund_etf_fund_daily_em unavailable: %s", last_error)
-    return {}
-
-
-_INDUSTRY_INDEX_KEYWORDS: tuple[tuple[str, str], ...] = (
-    ("沪深300", "1.000300"),
-    ("中证500", "0.399905"),
-    ("创业板", "0.399006"),
-    ("证券", "0.399975"),
-    ("银行", "0.399986"),
-    ("军工", "0.399967"),
-    ("白酒", "0.399997"),
-    ("新能源车", "0.399976"),
-    ("新能源汽车", "0.399976"),
-    ("医疗", "0.399933"),
-    ("医药", "0.399933"),
-    ("生物", "0.399441"),
-    ("互联网", "0.399973"),
-    ("传媒", "0.399971"),
-    ("煤炭", "0.399998"),
-    ("有色", "1.000944"),
-    ("房地产", "0.399965"),
-    ("地产", "0.399965"),
-    ("钢铁", "1.000987"),
-    ("环保", "0.399806"),
-    ("高铁", "0.399807"),
-    ("中药", "0.399989"),
-)
-
-
-def _guess_auto_fund_config(code: str, name: str, fund_type: str = "") -> dict[str, str]:
-    text = f"{name or ''}{fund_type or ''}"
-    category = "domestic"
-    algo_type = "holdings"
-    industry_index_code = ""
-    us_index_code = ""
-
-    if any(keyword in text for keyword in ("黄金", "原油", "油气", "商品", "纳指", "纳斯达克", "标普", "美国", "全球", "海外", "印度", "德国", "日本", "日经", "越南", "中概")):
-        category = "overseas"
-        algo_type = "overseas"
-        if "黄金" in text:
-            us_index_code = "101.GC00Y"
-        elif "原油" in text or "油气" in text:
-            us_index_code = "102.CL00Y"
-        elif "纳指" in text or "纳斯达克" in text or "中概" in text:
-            us_index_code = "100.NDX"
-        else:
-            us_index_code = "100.SPX"
-    elif any(keyword in text for keyword in ("香港", "港股", "恒生", "H股", "国企指数")):
-        category = "hk"
-        algo_type = "holdings"
-
-    if category == "domestic":
-        for keyword, index_code in _INDUSTRY_INDEX_KEYWORDS:
-            if keyword in text:
-                algo_type = "industry"
-                industry_index_code = index_code
-                break
-
-    return {
-        "fund_code": _normalize_code(code),
-        "fund_name": _clean_fund_name(name),
-        "market": _market_from_code(code),
-        "algo_type": algo_type,
-        "category": category,
-        "industry_index_code": industry_index_code,
-        "us_index_code": us_index_code,
-    }
-
-
-def build_akshare_auto_default_funds(
-    snapshot: dict[str, Any] | None,
-    existing_codes: Iterable[str] | None = None,
-) -> list[dict[str, str]]:
-    """Build non-ETF funds that AkShare can directly support.
-
-    A fund is eligible when:
-    1. ``fund_etf_fund_daily_em`` has a direct ``折价率`` row for it;
-    2. ``fund_value_estimation_em`` has an ``估算值`` row for it;
-    3. the listed-fund row is not ETF.
-    """
-    snapshot = snapshot or {}
-    listed_daily = snapshot.get("listed_daily") or {}
-    estimation = snapshot.get("estimation") or {}
-    existing = {_normalize_code(code) for code in (existing_codes or [])}
-    funds: list[dict[str, str]] = []
-    for code in sorted(listed_daily):
-        normalized_code = _normalize_code(code)
-        if not normalized_code or normalized_code in existing:
-            continue
-        row = listed_daily.get(code) or {}
-        if row.get("is_etf") or normalized_code in (snapshot.get("etf_spot") or {}):
-            continue
-        est = estimation.get(normalized_code) or {}
-        if row.get("premium_rate") is None or _to_float(est.get("estimated_nav"), 0.0) <= 0:
-            continue
-        name = row.get("fund_name") or est.get("fund_name") or normalized_code
-        fund_type = row.get("fund_type") or est.get("fund_type") or ""
-        fund = _guess_auto_fund_config(normalized_code, str(name), str(fund_type))
-        fund["akshare_auto_added"] = "true"
-        funds.append(fund)
-    return funds
-
-
 async def fetch_akshare_estimation_snapshot(
     session: aiohttp.ClientSession,
     symbols: Iterable[str] = ("LOF", "场内交易基金", "QDII"),
@@ -955,38 +930,37 @@ async def fetch_akshare_fund_snapshot(session: aiohttp.ClientSession) -> dict[st
     started = time.time()
     etf_task = fetch_akshare_etf_spot(session)
     lof_task = fetch_akshare_lof_spot(session)
-    listed_daily_task = fetch_akshare_listed_fund_daily(session)
+    exchange_daily_task = fetch_akshare_exchange_daily_snapshot(session)
     estimation_task = fetch_akshare_estimation_snapshot(session)
     purchase_status_task = fetch_akshare_fund_purchase_status(session)
-    etf_spot, lof_spot, listed_daily, estimation, purchase_status = await asyncio.gather(
-        etf_task, lof_task, listed_daily_task, estimation_task, purchase_status_task
+    etf_spot, lof_spot, exchange_daily, estimation, purchase_status = await asyncio.gather(
+        etf_task, lof_task, exchange_daily_task, estimation_task, purchase_status_task
     )
 
     # LOF rows provide broad LOF quote coverage; ETF rows override when f441/f402
-    # official IOPV/discount fields are present.  listed_daily is kept separate
-    # because it is the AkShare fund_etf_fund_daily_em page used for direct
-    # non-ETF discount-rate discovery.
+    # official IOPV/discount fields are present.  Non-ETF exchange daily rows are
+    # kept separately because they are primarily an eligibility/direct-discount
+    # source rather than a realtime quote source.
     spot = {**lof_spot, **etf_spot}
     snapshot = {
         "spot": spot,
         "etf_spot": etf_spot,
         "lof_spot": lof_spot,
-        "listed_daily": listed_daily,
+        "exchange_daily": exchange_daily,
         "estimation": estimation,
         "purchase_status": purchase_status,
         "fetched_at": datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S"),
         "elapsed_seconds": round(time.time() - started, 3),
     }
-    auto_candidates = build_akshare_auto_default_funds(snapshot)
     logger.info(
-        "AkShare fund snapshot fetched: spot=%s (etf=%s lof=%s), listed_daily=%s, estimation=%s, purchase_status=%s, auto_non_etf_candidates=%s, %.2fs",
-        len(spot), len(etf_spot), len(lof_spot), len(listed_daily), len(estimation), len(purchase_status), len(auto_candidates), snapshot["elapsed_seconds"],
+        "AkShare fund snapshot fetched: spot=%s (etf=%s lof=%s), exchange_daily_non_etf=%s, estimation=%s, purchase_status=%s, %.2fs",
+        len(spot), len(etf_spot), len(lof_spot), len(exchange_daily), len(estimation), len(purchase_status), snapshot["elapsed_seconds"],
     )
     return snapshot
 
 
 def _empty_snapshot() -> dict[str, Any]:
-    return {"spot": {}, "etf_spot": {}, "lof_spot": {}, "listed_daily": {}, "estimation": {}, "purchase_status": {}, "fetched_at": "", "elapsed_seconds": 0}
+    return {"spot": {}, "etf_spot": {}, "lof_spot": {}, "exchange_daily": {}, "estimation": {}, "purchase_status": {}, "fetched_at": "", "elapsed_seconds": 0}
 
 
 def get_cached_akshare_fund_snapshot(max_age_seconds: int | None = None) -> dict[str, Any]:
@@ -1046,10 +1020,10 @@ def get_fund_akshare_data(fund_code: str, snapshot: dict[str, Any] | None) -> di
     code = _normalize_code(fund_code)
     snapshot = snapshot or {}
     spot = (snapshot.get("spot") or {}).get(code) or {}
-    listed_daily = (snapshot.get("listed_daily") or {}).get(code) or {}
+    exchange_daily = (snapshot.get("exchange_daily") or {}).get(code) or {}
     estimation = (snapshot.get("estimation") or {}).get(code) or {}
     purchase_status = (snapshot.get("purchase_status") or {}).get(code) or {}
-    return {"spot": spot, "listed_daily": listed_daily, "estimation": estimation, "purchase_status": purchase_status}
+    return {"spot": spot, "exchange_daily": exchange_daily, "estimation": estimation, "purchase_status": purchase_status}
 
 
 def apply_akshare_fund_data_to_result(
@@ -1064,7 +1038,7 @@ def apply_akshare_fund_data_to_result(
     """
     data = get_fund_akshare_data(fund_code, snapshot)
     spot = data.get("spot") or {}
-    listed_daily = data.get("listed_daily") or {}
+    exchange_daily = data.get("exchange_daily") or {}
     estimation = data.get("estimation") or {}
     purchase_status = data.get("purchase_status") or {}
     sources: list[str] = []
@@ -1106,31 +1080,6 @@ def apply_akshare_fund_data_to_result(
         if estimation.get("estimate_time"):
             result["source_estimate_time"] = estimation.get("estimate_time", "")
 
-    if listed_daily:
-        source = listed_daily.get("source", "akshare.fund_etf_fund_daily_em")
-        sources.append(source)
-        if listed_daily.get("fund_name") and not result.get("fund_name"):
-            result["fund_name"] = listed_daily["fund_name"]
-        if listed_daily.get("fund_type"):
-            result["listed_fund_type"] = listed_daily.get("fund_type", "")
-        nav = _to_float(listed_daily.get("nav"), 0)
-        if nav > 0 and _to_float(result.get("nav"), 0) <= 0:
-            result["nav"] = nav
-            result["nav_source"] = f"{source}:单位净值"
-        if listed_daily.get("daily_change_rate") is not None and result.get("official_daily_change_rate") is None:
-            result["official_daily_change_rate"] = _to_float(listed_daily.get("daily_change_rate"), 0)
-        if _to_float(listed_daily.get("trade_price"), 0) > 0 and _to_float(result.get("trade_price"), 0) <= 0:
-            result["trade_price"] = round(_to_float(listed_daily.get("trade_price"), 0), 4)
-            result["price_source"] = source
-        raw_discount_rate = listed_daily.get("fund_discount_rate")
-        if raw_discount_rate is not None and not listed_daily.get("is_etf"):
-            result["fund_discount_rate"] = round(_to_float(raw_discount_rate, 0), 2)
-        premium_rate = listed_daily.get("premium_rate")
-        if premium_rate is not None and not listed_daily.get("is_etf") and result.get("akshare_premium_rate") is None:
-            result["premium_rate"] = round(_to_float(premium_rate, 0), 2)
-            result["akshare_premium_rate"] = result["premium_rate"]
-            result["premium_source"] = f"{source}:折价率取反为折溢价率"
-
     if spot:
         source = spot.get("source", "akshare.fund_spot_em")
         sources.append(source)
@@ -1161,6 +1110,31 @@ def apply_akshare_fund_data_to_result(
             result["premium_rate"] = round(_to_float(premium_rate, 0), 2)
             result["akshare_premium_rate"] = result["premium_rate"]
             result["premium_source"] = f"{source}:f402_基金折价率取反为折溢价率"
+
+    if exchange_daily:
+        source = exchange_daily.get("source", "akshare.fund_etf_fund_daily_em:非ETF场内交易基金")
+        sources.append(source)
+        if exchange_daily.get("fund_name") and not result.get("fund_name"):
+            result["fund_name"] = exchange_daily["fund_name"]
+        if exchange_daily.get("fund_type"):
+            result["fund_type"] = exchange_daily.get("fund_type", "")
+        # Keep realtime quote prices from fund_lof_spot_em/fund_etf_spot_em when
+        # available; otherwise use the price from the direct discount table.
+        if _to_float(result.get("trade_price"), 0) <= 0 and _to_float(exchange_daily.get("trade_price"), 0) > 0:
+            result["trade_price"] = round(_to_float(exchange_daily.get("trade_price"), 0), 4)
+            result["price_source"] = f"{source}:市价"
+        raw_discount_rate = exchange_daily.get("fund_discount_rate")
+        if raw_discount_rate is not None:
+            result["fund_discount_rate"] = round(_to_float(raw_discount_rate, 0), 2)
+        premium_rate = exchange_daily.get("premium_rate")
+        if premium_rate is not None:
+            result["premium_rate"] = round(_to_float(premium_rate, 0), 2)
+            result["akshare_premium_rate"] = result["premium_rate"]
+            result["premium_source"] = f"{source}:折价率取反为折溢价率"
+            base_nav = _to_float(result.get("estimated_nav"), 0) or _to_float(result.get("nav"), 0)
+            if base_nav > 0:
+                result["premium_base_nav"] = round(base_nav, 4)
+                result["premium_base_source"] = result.get("estimate_source") or result.get("nav_source") or "akshare"
 
     if sources:
         result["akshare_source"] = ", ".join(dict.fromkeys(sources))

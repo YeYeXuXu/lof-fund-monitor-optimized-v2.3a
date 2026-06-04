@@ -18,8 +18,9 @@ from datetime import datetime, timezone, timedelta
 sys.path.insert(0, os.path.dirname(__file__))
 
 from db import (init_db, seed_default_funds, get_all_funds, get_fund, add_fund, remove_fund, update_fund_algo,
-    save_holdings, get_holdings, save_realtime, get_all_realtime, get_realtime,
-    get_algo_configs, save_overseas_holdings, get_overseas_holdings, batch_add_funds,
+    save_holdings, get_holdings, get_all_holdings_map, save_realtime, save_realtime_many,
+    get_all_realtime, get_realtime, get_algo_configs, save_overseas_holdings,
+    get_overseas_holdings, get_all_overseas_holdings_map, batch_add_funds,
     update_holdings_timestamp, get_funds_needing_holdings_refresh,
     get_wechat_config, save_wechat_config, claim_wechat_push_slot, mark_wechat_push_slot)
 from fetcher import fetch_all_fund_data, fetch_fund_info, fetch_overseas_holdings, fetch_fund_holdings, fetch_fund_nav_from_lsjz
@@ -27,7 +28,7 @@ from estimator import estimate_nav_unified
 from wechat_push import send_wechat_message, build_threshold_alert_message, mask_send_keys, parse_send_keys
 from akshare_fund_adapter import (
     get_akshare_fund_snapshot, apply_akshare_fund_data_to_result,
-    overlay_akshare_realtime_for_funds, build_akshare_auto_default_funds,
+    overlay_akshare_realtime_for_funds, build_akshare_addable_funds,
 )
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -41,11 +42,37 @@ for noisy_logger in ['aiohttp.access', 'aiohttp.client', 'aiohttp.internal', 'ai
 # China Standard Time
 CST = timezone(timedelta(hours=8))
 
+
+def _env_int(name: str, default: int, minimum: int = 1, maximum: int | None = None) -> int:
+    try:
+        value = int(os.environ.get(name, str(default)) or default)
+    except (TypeError, ValueError):
+        value = default
+    value = max(minimum, value)
+    if maximum is not None:
+        value = min(maximum, value)
+    return value
+
+
 TRADING_REFRESH_INTERVAL_SECONDS = 300      # 开盘/交易时段：5 分钟
 NON_TRADING_REFRESH_INTERVAL_SECONDS = 1800 # 休市/非交易时段：30 分钟
 UPDATE_SCHEDULER_POLL_SECONDS = 30          # 仅用于检查下一轮刷新，不影响微信定时推送
 REFRESH_PROGRESS_LOG_EVERY = max(1, int(os.environ.get("REFRESH_PROGRESS_LOG_EVERY", "20") or 20))
 REFRESH_WAIT_LOG_INTERVAL_SECONDS = max(60, int(os.environ.get("REFRESH_WAIT_LOG_INTERVAL_SECONDS", "300") or 300))
+DATA_REFRESH_CONCURRENCY = _env_int("DATA_REFRESH_CONCURRENCY", 6 if os.environ.get("GITHUB_ACTIONS") else 4, 1, 24)
+DATA_REFRESH_BATCH_SAVE_SIZE = _env_int("DATA_REFRESH_BATCH_SAVE_SIZE", 30, 1, 200)
+DATA_FETCH_HTTP_LIMIT = _env_int("DATA_FETCH_HTTP_LIMIT", max(16, DATA_REFRESH_CONCURRENCY * 8), 4, 200)
+WECHAT_STATUS_FALLBACK_CONCURRENCY = _env_int("WECHAT_STATUS_FALLBACK_CONCURRENCY", 8, 1, 24)
+AKSHARE_AUTO_ADD_NON_ETF_FUNDS_ENV = "AKSHARE_AUTO_ADD_NON_ETF_FUNDS"
+
+
+def _make_http_connector(limit: int | None = None) -> aiohttp.TCPConnector:
+    return aiohttp.TCPConnector(
+        limit=limit or DATA_FETCH_HTTP_LIMIT,
+        limit_per_host=max(4, min(32, (limit or DATA_FETCH_HTTP_LIMIT) // 2)),
+        ttl_dns_cache=300,
+        enable_cleanup_closed=True,
+    )
 
 
 def _env_enabled(name: str, default: bool = False) -> bool:
@@ -57,35 +84,6 @@ def _env_enabled(name: str, default: bool = False) -> bool:
 
 def _running_in_github_actions() -> bool:
     return _env_enabled("GITHUB_ACTIONS")
-
-
-async def _sync_akshare_auto_funds(snapshot: dict) -> int:
-    """Auto-add non-ETF funds directly supported by AkShare discount + estimate data."""
-    if not _env_enabled("AKSHARE_AUTO_ADD_FUNDS", True):
-        return 0
-    try:
-        existing = await get_all_funds()
-        existing_codes = {str(f.get("fund_code", "")).strip() for f in existing}
-        new_funds = build_akshare_auto_default_funds(snapshot, existing_codes=existing_codes)
-        if not new_funds:
-            logger.info("AkShare auto-add: no new non-ETF funds matched direct discount-rate + estimated-NAV criteria")
-            return 0
-        max_count = int(os.environ.get("AKSHARE_AUTO_ADD_FUNDS_MAX", "0") or 0)
-        if max_count > 0:
-            new_funds = new_funds[:max_count]
-        await batch_add_funds(new_funds)
-        preview = ", ".join(f"{item.get('fund_code')} {item.get('fund_name')}" for item in new_funds[:12])
-        if len(new_funds) > 12:
-            preview += f", ... +{len(new_funds) - 12}"
-        logger.info(
-            "AkShare auto-added %s non-ETF funds with direct 折价率 + 估算净值 support: %s",
-            len(new_funds),
-            preview,
-        )
-        return len(new_funds)
-    except Exception as exc:
-        logger.warning("AkShare auto-add funds failed; continuing with existing fund list: %s", exc)
-        return 0
 
 
 def _status_missing(value: object) -> bool:
@@ -444,7 +442,7 @@ async def _apply_valuation_model(session: aiohttp.ClientSession, fund: dict, dat
         if data.get("akshare_premium_rate") is not None:
             data["premium_rate"] = round(float(data.get("akshare_premium_rate") or 0), 2)
             data["premium_source"] = data.get("premium_source") or data.get("akshare_source") or "akshare.fund_etf_spot_em:f402_基金折价率取反为折溢价率"
-        data["model_version"] = "净值估值模型优化v2.3L"
+        data["model_version"] = "净值估值模型优化v2.6L"
         data["valuation_method"] = "akshare_fund_etf_spot_em_iopv"
         data["valuation_confidence"] = 0.9
         data["valuation_note"] = "优先使用 AkShare fund_etf_spot_em：f441=IOPV实时估值；f402=基金折价率，已取反为折溢价率"
@@ -454,7 +452,7 @@ async def _apply_valuation_model(session: aiohttp.ClientSession, fund: dict, dat
     estimate_source_text = f"{data.get('estimate_source', '')};{data.get('akshare_source', '')}"
     if source_estimated_nav > 0 and "akshare.fund_value_estimation_em" in estimate_source_text:
         data["estimated_nav"] = round(source_estimated_nav, 4)
-        data["model_version"] = "净值估值模型优化v2.3L"
+        data["model_version"] = "净值估值模型优化v2.6L"
         data["valuation_method"] = "akshare_fund_value_estimation_em"
         data["valuation_confidence"] = 0.85
         data["valuation_note"] = "优先使用 AkShare fund_value_estimation_em 净值估算；缺失时才回退本地估值模型"
@@ -477,18 +475,60 @@ async def _apply_valuation_model(session: aiohttp.ClientSession, fund: dict, dat
 
 
 async def _persist_fetched_holdings(fund_code: str, data: dict) -> None:
-    """Persist latest holdings snapshots only when the crawler returned rows.
+    """Persist holdings only when the crawler fetched a fresh snapshot.
 
-    Empty lists often mean a temporary API/parser miss, so keeping the last good
-    snapshot is safer for intraday valuation than deleting holdings immediately.
+    Fast quote refreshes primarily use cached holdings.  Rewriting those cached
+    rows on every 5-minute Actions cycle adds SQLite I/O without changing data,
+    so v2.6L writes holdings only when a fetch actually returned fresh rows.
     """
-    if data.get("holdings"):
+    if data.get("_holdings_fetched") and data.get("holdings"):
         await save_holdings(fund_code, data["holdings"])
         await update_holdings_timestamp(fund_code, "domestic")
-    if data.get("overseas_holdings"):
+    if data.get("_overseas_holdings_fetched") and data.get("overseas_holdings"):
         await save_overseas_holdings(fund_code, data["overseas_holdings"])
         await update_holdings_timestamp(fund_code, "overseas")
 
+
+
+
+async def seed_akshare_addable_non_etf_funds(*, respect_env: bool = True) -> int:
+    """Add non-ETF funds that AkShare can monitor with direct premium and estimate data.
+
+    v2.6L keeps the existing default_funds.json path intact, then supplements it
+    from AkShare at runtime.  A fund is added only if the AkShare snapshot contains
+    both a direct non-ETF exchange-table discount rate and a direct estimated NAV.
+    Set AKSHARE_AUTO_ADD_NON_ETF_FUNDS=0 to disable this startup sync.
+    """
+    if respect_env and not _env_enabled(AKSHARE_AUTO_ADD_NON_ETF_FUNDS_ENV, True):
+        logger.info("AkShare non-ETF auto-add skipped: %s disabled", AKSHARE_AUTO_ADD_NON_ETF_FUNDS_ENV)
+        return 0
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            snapshot = await get_akshare_fund_snapshot(session, max_age_seconds=60, force=True)
+        candidates = build_akshare_addable_funds(snapshot)
+        if not candidates:
+            logger.info("AkShare non-ETF auto-add found no eligible funds in current snapshot")
+            return 0
+
+        existing = await get_all_funds()
+        existing_codes = {item.get("fund_code", "") for item in existing}
+        new_funds = [item for item in candidates if item.get("fund_code") not in existing_codes]
+        if not new_funds:
+            logger.info("AkShare non-ETF auto-add: %s eligible funds already exist", len(candidates))
+            return 0
+
+        await batch_add_funds(new_funds)
+        logger.info(
+            "AkShare non-ETF auto-add: added=%s eligible=%s codes=%s",
+            len(new_funds),
+            len(candidates),
+            ",".join(item["fund_code"] for item in new_funds[:50]) + ("..." if len(new_funds) > 50 else ""),
+        )
+        return len(new_funds)
+    except Exception as exc:
+        logger.warning("AkShare non-ETF auto-add failed; startup continues: %s", exc)
+        return 0
 
 async def update_single_fund(fund_code: str, market: str = "sz"):
     """Update a single fund's data (used when adding a new fund)."""
@@ -527,8 +567,55 @@ async def update_single_fund(fund_code: str, market: str = "sz"):
         logger.error(f"Error updating single fund {fund_code}: {e}")
 
 
+async def _flush_realtime_buffer(buffer: list[tuple[str, dict]]) -> None:
+    """Save buffered realtime rows, falling back to row-by-row on DB contention."""
+    if not buffer:
+        return
+    try:
+        await save_realtime_many(buffer)
+    except Exception as exc:
+        logger.warning("Batch realtime save failed, falling back to per-fund save: %s", exc)
+        for fund_code, data in buffer:
+            await save_realtime(fund_code, data)
+
+
+async def _refresh_one_fund_for_update(
+    index: int,
+    fund: dict,
+    session: aiohttp.ClientSession,
+    akshare_snapshot: dict,
+    holdings_cache: dict[str, list[dict]],
+    overseas_holdings_cache: dict[str, list[dict]],
+    semaphore: asyncio.Semaphore,
+) -> tuple[int, dict, dict, BaseException | None]:
+    """Fetch and value one fund for the concurrent all-fund refresh."""
+    data = {"fund_code": fund.get("fund_code", "")}
+    async with semaphore:
+        if shutdown_event.is_set():
+            return index, fund, data, asyncio.CancelledError("shutdown requested")
+        try:
+            fund_code = fund["fund_code"]
+            market = "0" if fund.get("market", "sz") == "sz" else "1"
+            category = fund.get("category", "domestic")
+            data = await _fetch_fund_data_with_session(
+                session,
+                fund_code,
+                market,
+                category,
+                akshare_snapshot=akshare_snapshot,
+                refresh_holdings=False,
+                holdings_cache=holdings_cache,
+                overseas_holdings_cache=overseas_holdings_cache,
+            )
+            await _apply_valuation_model(session, fund, data)
+            _recalculate_premium_if_needed(data)
+            return index, fund, data, None
+        except BaseException as exc:
+            return index, fund, data, exc
+
+
 async def update_all_funds():
-    """Update all fund data from APIs and print observable refresh progress."""
+    """Update all fund data from APIs with bounded concurrency and progress logs."""
     if update_lock.locked():
         logger.info("Data refresh skipped: previous update still running")
         return
@@ -542,51 +629,72 @@ async def update_all_funds():
         total = len(funds)
         updated = 0
         failed = 0
+        completed = 0
         started_at = time.monotonic()
+        save_buffer: list[tuple[str, dict]] = []
         logger.info(
-            "Data refresh started: funds=%s, current_time=%s",
+            "Data refresh started: funds=%s concurrency=%s http_limit=%s current_time=%s",
             total,
+            DATA_REFRESH_CONCURRENCY,
+            DATA_FETCH_HTTP_LIMIT,
             datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S"),
         )
 
         try:
-            async with aiohttp.ClientSession() as session:
-                akshare_snapshot = await get_akshare_fund_snapshot(session, max_age_seconds=60, force=True)
+            holdings_cache = await get_all_holdings_map()
+            overseas_holdings_cache = await get_all_overseas_holdings_map()
+            logger.info(
+                "Data refresh cache loaded: domestic_holdings_funds=%s overseas_holdings_funds=%s",
+                len(holdings_cache),
+                len(overseas_holdings_cache),
+            )
+
+            async with aiohttp.ClientSession(connector=_make_http_connector()) as session:
+                akshare_snapshot = await get_akshare_fund_snapshot(session, max_age_seconds=60, force=False)
                 logger.info(
-                    "Data refresh AkShare snapshot: spot=%s listed_daily=%s estimation=%s purchase_status=%s fetched_at=%s elapsed=%ss",
+                    "Data refresh AkShare snapshot: spot=%s estimation=%s purchase_status=%s fetched_at=%s elapsed=%ss",
                     len(akshare_snapshot.get("spot") or {}),
-                    len(akshare_snapshot.get("listed_daily") or {}),
                     len(akshare_snapshot.get("estimation") or {}),
                     len(akshare_snapshot.get("purchase_status") or {}),
                     akshare_snapshot.get("fetched_at", ""),
                     akshare_snapshot.get("elapsed_seconds", ""),
                 )
-                auto_added = await _sync_akshare_auto_funds(akshare_snapshot)
-                if auto_added:
-                    funds = await get_all_funds()
-                    total = len(funds)
-                    logger.info("Data refresh fund list reloaded after AkShare auto-add: funds=%s", total)
 
-                for index, fund in enumerate(funds, start=1):
-                    if shutdown_event.is_set():
-                        logger.info("Data refresh interrupted by shutdown: %s/%s processed", index - 1, total)
-                        break
-                    data = {"fund_code": fund.get("fund_code", "")}
-                    try:
-                        fund_code = fund["fund_code"]
-                        market = "0" if fund.get("market", "sz") == "sz" else "1"
-
-                        category = fund.get("category", "domestic")
-                        data = await _fetch_fund_data_with_session(
-                            session, fund_code, market, category,
-                            akshare_snapshot=akshare_snapshot, refresh_holdings=False,
+                semaphore = asyncio.Semaphore(DATA_REFRESH_CONCURRENCY)
+                tasks = [
+                    asyncio.create_task(
+                        _refresh_one_fund_for_update(
+                            index, fund, session, akshare_snapshot,
+                            holdings_cache, overseas_holdings_cache, semaphore,
                         )
+                    )
+                    for index, fund in enumerate(funds, start=1)
+                ]
 
-                        await _apply_valuation_model(session, fund, data)
+                try:
+                    for future in asyncio.as_completed(tasks):
+                        if shutdown_event.is_set():
+                            for task in tasks:
+                                task.cancel()
+                            await asyncio.gather(*tasks, return_exceptions=True)
+                            logger.info("Data refresh interrupted by shutdown: %s/%s completed", completed, total)
+                            break
+
+                        index, fund, data, error = await future
+                        completed += 1
+                        fund_code = fund.get("fund_code", data.get("fund_code", ""))
+
+                        if error:
+                            failed += 1
+                            logger.error("Error updating fund %s: %s", fund_code, error)
+                            _log_refresh_progress(completed, total, updated, failed, data, started_at)
+                            continue
+
                         await _persist_fetched_holdings(fund_code, data)
-                        _recalculate_premium_if_needed(data)
-
-                        await save_realtime(fund_code, data)
+                        save_buffer.append((fund_code, data))
+                        if len(save_buffer) >= DATA_REFRESH_BATCH_SAVE_SIZE:
+                            await _flush_realtime_buffer(save_buffer)
+                            save_buffer.clear()
                         updated += 1
 
                         logger.info(
@@ -599,18 +707,24 @@ async def update_all_funds():
                             data.get("premium_base_nav") or data.get("iopv_estimated_nav") or "-",
                             _describe_fund_data_sources(data),
                         )
-                        _log_refresh_progress(index, total, updated, failed, data, started_at)
+                        _log_refresh_progress(completed, total, updated, failed, data, started_at)
+                finally:
+                    pending = [task for task in tasks if not task.done()]
+                    for task in pending:
+                        task.cancel()
+                    if pending:
+                        await asyncio.gather(*pending, return_exceptions=True)
 
-                    except Exception as e:
-                        failed += 1
-                        logger.error("Error updating fund %s: %s", fund.get('fund_code'), e)
-                        if index == 1 or index == total or index % REFRESH_PROGRESS_LOG_EVERY == 0:
-                            _log_refresh_progress(index, total, updated, failed, data, started_at)
-
-                    await asyncio.sleep(0.05)
+            await _flush_realtime_buffer(save_buffer)
+            save_buffer.clear()
         except Exception as e:
             logger.error("Error in update_all_funds: %s", e)
         finally:
+            if save_buffer:
+                try:
+                    await _flush_realtime_buffer(save_buffer)
+                except Exception as exc:
+                    logger.error("Error flushing remaining realtime rows: %s", exc)
             logger.info(
                 "Data refresh completed: updated=%s failed=%s total=%s elapsed=%.1fs current_time=%s",
                 updated,
@@ -620,6 +734,7 @@ async def update_all_funds():
                 datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S"),
             )
 
+
 async def _fetch_fund_data_with_session(
     session: aiohttp.ClientSession,
     fund_code: str,
@@ -627,6 +742,8 @@ async def _fetch_fund_data_with_session(
     category: str = "domestic",
     akshare_snapshot: dict | None = None,
     refresh_holdings: bool = False,
+    holdings_cache: dict[str, list[dict]] | None = None,
+    overseas_holdings_cache: dict[str, list[dict]] | None = None,
 ) -> dict:
     """Fetch all data for a single fund using an existing session.
 
@@ -649,7 +766,7 @@ async def _fetch_fund_data_with_session(
         "akshare_source": "", "akshare_premium_rate": None, "iopv_estimated_nav": 0,
         "nav_source": "", "estimate_source": "", "price_source": "", "trade_amount_source": "",
         "premium_source": "", "premium_base_nav": 0, "premium_base_source": "",
-        "status_source": "",
+        "status_source": "", "_holdings_fetched": False, "_overseas_holdings_fetched": False,
     }
 
     # 1) Prefer AkShare release methods for quote/IOPV/valuation information.
@@ -711,7 +828,10 @@ async def _fetch_fund_data_with_session(
     # 4) Holdings are expensive and change slowly.  Use cached rows first during
     # regular quote refreshes; the dedicated daily/manual holdings refresh still
     # keeps them fresh, and a new fund can request refresh_holdings=True.
-    cached_holdings = await get_holdings(fund_code)
+    if holdings_cache is not None:
+        cached_holdings = list(holdings_cache.get(fund_code, []) or [])
+    else:
+        cached_holdings = await get_holdings(fund_code)
     holdings = cached_holdings or []
     need_holdings_fetch = refresh_holdings or not holdings
     # If AkShare already supplied a direct IOPV/estimate, do not block scheduled
@@ -720,6 +840,7 @@ async def _fetch_fund_data_with_session(
         fetched_holdings = await fetch_fund_holdings(session, fund_code)
         if fetched_holdings:
             holdings = fetched_holdings
+            result["_holdings_fetched"] = True
         elif cached_holdings:
             logger.info(f"Using cached domestic holdings for {fund_code}")
     elif cached_holdings:
@@ -729,13 +850,17 @@ async def _fetch_fund_data_with_session(
     # For HK/overseas funds, prefer cached overseas holdings during fast quote
     # cycles unless no AkShare/fund estimate is available.
     if category in ("hk", "overseas"):
-        cached_overseas = await get_overseas_holdings(fund_code)
+        if overseas_holdings_cache is not None:
+            cached_overseas = list(overseas_holdings_cache.get(fund_code, []) or [])
+        else:
+            cached_overseas = await get_overseas_holdings(fund_code)
         overseas_hk = cached_overseas or []
         need_overseas_fetch = refresh_holdings or not overseas_hk
         if need_overseas_fetch and (refresh_holdings or result.get("source_estimated_nav", 0) <= 0):
             fetched_overseas = await fetch_overseas_holdings(session, fund_code)
             if fetched_overseas:
                 overseas_hk = fetched_overseas
+                result["_overseas_holdings_fetched"] = True
             elif cached_overseas:
                 logger.info(f"Using cached HK/overseas holdings for {fund_code}")
         if overseas_hk:
@@ -1329,7 +1454,7 @@ def _format_push_percent(value: float) -> str:
 
 
 def _build_threshold_alert_title(values: dict, conditions: list) -> str:
-    """Build the only scheduled WeChat push title for v2.3L.
+    """Build the only scheduled WeChat push title for v2.6L.
 
     Example: LOF折溢价告警 溢价3% 成交60万
     """
@@ -1347,8 +1472,9 @@ async def _ensure_alert_purchase_statuses(alerts: list[dict]) -> None:
     """Fill missing alert purchase/redeem statuses before WeChat rendering.
 
     Scheduled push must not wait for the background data refresh lock.  It uses
-    stored realtime rows plus a fast AkShare overlay first, and only falls back
-    to the original per-fund status page for alert rows that still show 未知.
+    stored realtime rows plus a fast AkShare overlay first, then uses a bounded
+    concurrent fallback for only the remaining alert rows so slow pages do not
+    hold the WeChat push path hostage.
     """
     missing = [
         item for item in alerts
@@ -1356,12 +1482,16 @@ async def _ensure_alert_purchase_statuses(alerts: list[dict]) -> None:
     ]
     if not missing:
         return
+
     from fetcher import fetch_fund_purchase_status
-    async with aiohttp.ClientSession() as session:
-        for item in missing:
-            fund_code = item.get("fund_code", "")
-            if not fund_code:
-                continue
+
+    semaphore = asyncio.Semaphore(WECHAT_STATUS_FALLBACK_CONCURRENCY)
+
+    async def fill_one(session: aiohttp.ClientSession, item: dict) -> None:
+        fund_code = item.get("fund_code", "")
+        if not fund_code:
+            return
+        async with semaphore:
             try:
                 status = await fetch_fund_purchase_status(session, fund_code)
                 if not _status_missing(status.get("purchase_status")):
@@ -1371,6 +1501,9 @@ async def _ensure_alert_purchase_statuses(alerts: list[dict]) -> None:
                 item["status_source"] = status.get("status_source", "original.eastmoney.f10_or_fund_page")
             except Exception as exc:
                 logger.debug("WeChat alert status fallback failed for %s: %s", fund_code, exc)
+
+    async with aiohttp.ClientSession(connector=_make_http_connector(WECHAT_STATUS_FALLBACK_CONCURRENCY * 2)) as session:
+        await asyncio.gather(*(fill_one(session, item) for item in missing), return_exceptions=True)
 
 
 async def check_threshold_alerts(config: dict = None) -> dict:
@@ -1394,12 +1527,11 @@ async def check_threshold_alerts(config: dict = None) -> dict:
         # This fast in-memory overlay avoids waiting for a full holdings refresh
         # cycle at the configured push minute.
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(connector=_make_http_connector(8)) as session:
                 akshare_snapshot = await get_akshare_fund_snapshot(session, max_age_seconds=60, stale_if_busy=True)
             logger.info(
-                "WeChat alert source overlay: AkShare spot=%s listed_daily=%s estimation=%s purchase_status=%s fetched_at=%s; stored_realtime=%s funds",
+                "WeChat alert source overlay: AkShare spot=%s estimation=%s purchase_status=%s fetched_at=%s; stored_realtime=%s funds",
                 len(akshare_snapshot.get("spot") or {}),
-                len(akshare_snapshot.get("listed_daily") or {}),
                 len(akshare_snapshot.get("estimation") or {}),
                 len(akshare_snapshot.get("purchase_status") or {}),
                 akshare_snapshot.get("fetched_at", ""),
@@ -1434,7 +1566,7 @@ async def check_threshold_alerts(config: dict = None) -> dict:
             return {"success": True, "sent": False, "msg": "满足阈值的基金均因申购/赎回暂停被剔除", "count": 0}
         conditions = _triggered_conditions(alerts)
 
-        # v2.3L: automatic WeChat push sends exactly one threshold-alert message
+        # v2.6L: automatic WeChat push sends exactly one threshold-alert message
         # with a compact title such as "LOF折溢价告警 溢价3% 折价-5% 成交60万".
         # The condition list is rebuilt after paused申购/赎回 filtering so the title
         # and body describe only the remaining actionable alerts.
@@ -1462,7 +1594,7 @@ async def check_threshold_alerts(config: dict = None) -> dict:
 
 
 async def periodic_wechat_push():
-    """Automatic WeChat alert task for v2.3L.
+    """Automatic WeChat alert task for v2.6L.
 
     Strict rules:
     1. Only the configured push_time values are allowed to trigger a push.
@@ -1734,6 +1866,33 @@ async def api_fetch_overseas_holdings(request):
         return web.json_response({"code": -1, "msg": str(e)})
 
 
+
+
+async def api_add_akshare_non_etf_funds(request):
+    """Manually import all currently eligible non-ETF AkShare-direct funds."""
+    try:
+        added = await seed_akshare_addable_non_etf_funds(respect_env=False)
+        return web.json_response({"code": 0, "msg": f"AkShare 非 ETF 直连基金新增完成，新增 {added} 只"})
+    except Exception as e:
+        logger.error(f"Error importing AkShare non-ETF funds: {e}")
+        return web.json_response({"code": -1, "msg": str(e)})
+
+
+async def api_preview_akshare_non_etf_funds(request):
+    """Preview currently eligible non-ETF AkShare-direct funds without importing."""
+    try:
+        async with aiohttp.ClientSession() as session:
+            snapshot = await get_akshare_fund_snapshot(session, max_age_seconds=60, force=True)
+        funds = build_akshare_addable_funds(snapshot)
+        existing = await get_all_funds()
+        existing_codes = {item.get("fund_code", "") for item in existing}
+        for item in funds:
+            item["exists"] = item.get("fund_code") in existing_codes
+        return web.json_response({"code": 0, "data": funds, "count": len(funds)})
+    except Exception as e:
+        logger.error(f"Error previewing AkShare non-ETF funds: {e}")
+        return web.json_response({"code": -1, "msg": str(e)})
+
 async def api_batch_import(request):
     """Batch import funds from Excel data. Body: {"funds": [{"fund_code":..., "fund_name":..., "market":..., "algo_type":..., "category":..., ...}]}"""
     try:
@@ -1912,13 +2071,13 @@ async def api_save_wechat_config(request):
 
 
 async def api_test_wechat_push(request):
-    """v2.3L keeps this route as a no-op so no extra WeChat messages are sent."""
-    return web.json_response({"code": -1, "msg": "v2.3L 已取消测试推送；微信只在设置时间发送 1 条 LOF折溢价告警"})
+    """v2.6L keeps this route as a no-op so no extra WeChat messages are sent."""
+    return web.json_response({"code": -1, "msg": "v2.6L 已取消测试推送；微信只在设置时间发送 1 条 LOF折溢价告警"})
 
 
 async def api_send_summary_now(request):
-    """v2.3L removes summary pushes; keep this route as a safe no-op for compatibility."""
-    return web.json_response({"code": -1, "msg": "v2.3L 已取消汇总推送；自动微信推送只在设置时间发送 1 条 LOF折溢价告警"})
+    """v2.6L removes summary pushes; keep this route as a safe no-op for compatibility."""
+    return web.json_response({"code": -1, "msg": "v2.6L 已取消汇总推送；自动微信推送只在设置时间发送 1 条 LOF折溢价告警"})
 
 
 # ============ Static File Serving ============
@@ -1935,6 +2094,7 @@ async def admin(request):
 async def on_startup(app):
     await init_db()
     await seed_default_funds()
+    await seed_akshare_addable_non_etf_funds()
     app['update_task'] = asyncio.create_task(periodic_update())
     if _running_in_github_actions() and not _env_enabled("ACTIONS_REFRESH_HOLDINGS"):
         logger.info(
@@ -1977,6 +2137,8 @@ def create_app():
     app.router.add_post("/api/refresh-holdings", api_refresh_holdings)
     app.router.add_get("/api/trading-status", api_trading_status)
     app.router.add_post("/api/funds/batch-import", api_batch_import)
+    app.router.add_get("/api/funds/akshare-non-etf", api_preview_akshare_non_etf_funds)
+    app.router.add_post("/api/funds/akshare-non-etf", api_add_akshare_non_etf_funds)
     app.router.add_get("/api/duckdns", api_get_duckdns_config)
     app.router.add_post("/api/duckdns", api_save_duckdns_config)
     app.router.add_post("/api/duckdns/update", api_update_duckdns_now)

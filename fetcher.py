@@ -3,6 +3,8 @@ import aiohttp
 import re
 import json
 import logging
+import os
+import time
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone, timedelta
 
@@ -25,9 +27,52 @@ HEADERS_F10 = {
 
 
 PUSH2_ENDPOINTS = (
+    "https://push2delay.eastmoney.com/api/qt/stock/get",
+    "https://push2.eastmoney.com/api/qt/stock/get",
+    "https://88.push2.eastmoney.com/api/qt/stock/get",
+    "https://2.push2.eastmoney.com/api/qt/stock/get",
     "http://push2delay.eastmoney.com/api/qt/stock/get",
     "http://push2.eastmoney.com/api/qt/stock/get",
 )
+FETCHER_REQUEST_CACHE_TTL_SECONDS = max(0.0, float(os.environ.get("FETCHER_REQUEST_CACHE_TTL", "20") or 20))
+_PUSH2_QUOTE_CACHE: dict[tuple[str, str], tuple[float, dict]] = {}
+
+
+def _cache_get(cache: dict, key):
+    if FETCHER_REQUEST_CACHE_TTL_SECONDS <= 0:
+        return None
+    entry = cache.get(key)
+    if not entry:
+        return None
+    expires_at, value = entry
+    if time.monotonic() >= expires_at:
+        cache.pop(key, None)
+        return None
+    return dict(value) if isinstance(value, dict) else value
+
+
+def _cache_set(cache: dict, key, value) -> None:
+    if FETCHER_REQUEST_CACHE_TTL_SECONDS <= 0:
+        return
+    # Keep the cache small and short-lived. It is only meant to deduplicate
+    # repeated quote/FX requests within one Actions refresh cycle.
+    if len(cache) > 2000:
+        now = time.monotonic()
+        expired = [k for k, (expires_at, _) in cache.items() if expires_at < now]
+        for k in expired:
+            cache.pop(k, None)
+        if len(cache) > 2000:
+            cache.clear()
+    cache[key] = (time.monotonic() + FETCHER_REQUEST_CACHE_TTL_SECONDS, dict(value) if isinstance(value, dict) else value)
+
+
+def _num(value, default: float = 0.0) -> float:
+    try:
+        if value in (None, "", "-", "--", "---"):
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 US_MARKET_PREFIXES = ("105", "106", "107")
 # Common Bloomberg/overseas exchange suffixes that EastMoney F10 sometimes
 # appends to the symbol text when no quote link is available, e.g. ENBCN,
@@ -78,7 +123,16 @@ def _quote_trade_date(value) -> str:
 
 async def _fetch_push2_quote(session: aiohttp.ClientSession, secid: str, fields: str,
                              timeout: int = 10, retries: int = 2) -> dict:
-    """Fetch one EastMoney quote with endpoint fallback and small retries."""
+    """Fetch one EastMoney quote with endpoint fallback, retries and short TTL cache."""
+    secid = str(secid or "").strip()
+    fields = str(fields or "").strip()
+    if not secid or not fields:
+        return {}
+    cache_key = (secid, fields)
+    cached = _cache_get(_PUSH2_QUOTE_CACHE, cache_key)
+    if cached is not None:
+        return cached
+
     params = {"secid": secid, "fields": fields}
     last_error = ""
     for attempt in range(1, retries + 1):
@@ -87,7 +141,9 @@ async def _fetch_push2_quote(session: aiohttp.ClientSession, secid: str, fields:
                 async with session.get(url, params=params, headers=HEADERS_QUOTE, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
                     data = await _read_json_response(resp)
                     if data.get("rc") == 0 and data.get("data"):
-                        return data["data"]
+                        result = data["data"]
+                        _cache_set(_PUSH2_QUOTE_CACHE, cache_key, result)
+                        return dict(result)
                     if data:
                         last_error = f"rc={data.get('rc')}"
             except Exception as exc:
@@ -96,6 +152,7 @@ async def _fetch_push2_quote(session: aiohttp.ClientSession, secid: str, fields:
                              attempt, retries, secid, url, last_error)
     if last_error:
         logger.debug("No quote data for %s after retries: %s", secid, last_error)
+    _cache_set(_PUSH2_QUOTE_CACHE, cache_key, {})
     return {}
 
 
@@ -203,56 +260,30 @@ async def fetch_fund_estimate(session: aiohttp.ClientSession, fund_code: str) ->
 
 
 async def fetch_stock_price(session: aiohttp.ClientSession, fund_code: str, market: str = "0") -> dict:
-    """Fetch LOF secondary market trading price from eastmoney push2 API."""
+    """Fetch LOF secondary market trading price from EastMoney push2 API."""
     try:
         secid = f"{market}.{fund_code}"
-        url = f"http://push2delay.eastmoney.com/api/qt/stock/get"
-        params = {
-            "secid": secid,
-            "fields": "f43,f44,f45,f46,f47,f48,f50,f57,f58,f169,f170,f171"
+        d = await _fetch_push2_quote(
+            session,
+            secid,
+            "f43,f44,f45,f46,f47,f48,f50,f57,f58,f169,f170,f171",
+            timeout=8,
+            retries=2,
+        )
+        if not d:
+            return {}
+        # EastMoney push2 API for LOF/fund prices:
+        # price/change values are multiplied by 1000; change-rate values by 100.
+        return {
+            "trade_price": round(_num(d.get("f43")) / 1000, 3),
+            "trade_price_change": round(_num(d.get("f169")) / 1000, 3),
+            "trade_price_change_rate": round(_num(d.get("f170")) / 100, 2),
+            "stock_name": d.get("f58", ""),
+            "high": round(_num(d.get("f44")) / 1000, 3),
+            "low": round(_num(d.get("f45")) / 1000, 3),
+            "volume": d.get("f47", 0),
+            "amount": _num(d.get("f48")),
         }
-        async with session.get(url, params=params, headers=HEADERS_QUOTE, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-            # Handle non-JSON responses (some fund codes return text/plain)
-            content_type = resp.headers.get('Content-Type', '')
-            if 'json' not in content_type:
-                text = await resp.text()
-                try:
-                    data = json.loads(text)
-                except json.JSONDecodeError:
-                    logger.warning(f"Non-JSON response for stock price {fund_code}")
-                    return {}
-            else:
-                data = await resp.json()
-            if data.get("rc") == 0 and data.get("data"):
-                d = data["data"]
-                # f43=current price, f44=high, f45=low, f46=open, f47=volume, f48=amount
-                # f50=amplitude, f57=code, f58=name, f169=change, f170=change_rate
-                price = d.get("f43", 0)
-                change = d.get("f169", 0)
-                change_rate = d.get("f170", 0)
-                high = d.get("f44", 0)
-                low = d.get("f45", 0)
-                
-                # Eastmoney push2 API for LOF/fund prices:
-                # Price values are multiplied by 1000 (e.g., 750 = 0.750 yuan)
-                # Change values are also multiplied by 1000 (e.g., -12 = -0.012)
-                # Change rate values are multiplied by 100 (e.g., -157 = -1.57%)
-                price_val = price / 1000
-                change_val = change / 1000
-                change_rate_val = change_rate / 100
-                high_val = high / 1000
-                low_val = low / 1000
-                
-                return {
-                    "trade_price": round(price_val, 3),
-                    "trade_price_change": round(change_val, 3),
-                    "trade_price_change_rate": round(change_rate_val, 2),
-                    "stock_name": d.get("f58", ""),
-                    "high": round(high_val, 3),
-                    "low": round(low_val, 3),
-                    "volume": d.get("f47", 0),
-                    "amount": d.get("f48", 0),
-                }
     except Exception as e:
         logger.error(f"Error fetching stock price for {fund_code}: {e}")
     return {}
@@ -359,11 +390,7 @@ async def fetch_stock_change_info(session: aiohttp.ClientSession, em_code: str) 
     try:
         d = await _fetch_push2_quote(session, em_code, "f43,f170,f44,f45,f46,f47,f57,f58,f124", timeout=10, retries=2)
         if d:
-            change_rate = d.get("f170", 0)
-            if change_rate in (None, "-"):
-                change_rate_val = 0.0
-            else:
-                change_rate_val = float(change_rate) / 100.0
+            change_rate_val = _num(d.get("f170")) / 100.0
             quote_time = _format_quote_time(d.get("f124"))
             return {
                 "em_code": em_code,
@@ -554,56 +581,28 @@ async def fetch_fund_share_change(session: aiohttp.ClientSession, fund_code: str
 
 
 async def fetch_index_info(session: aiohttp.ClientSession, index_code: str) -> dict:
-    """Fetch index name and current value from eastmoney push2 API.
-    index_code format: market.code (e.g., 0.399997 for CSI Liquor, 1.000001 for SSE Composite)
-    Returns dict with index_name, index_value, change_rate.
-    """
+    """Fetch index name and current value from EastMoney push2 API."""
     try:
-        url = "http://push2delay.eastmoney.com/api/qt/stock/get"
-        params = {
-            "secid": index_code,
-            "fields": "f43,f44,f45,f57,f58,f169,f170,f124"
+        d = await _fetch_push2_quote(session, index_code, "f43,f44,f45,f57,f58,f169,f170,f124", timeout=8, retries=2)
+        if not d:
+            return {}
+        raw_value = _num(d.get("f43"))
+        change_rate = _num(d.get("f170")) / 100.0
+        index_name = d.get("f58", "")
+        index_code_raw = str(d.get("f57", "") or "")
+        if len(index_code_raw) == 6 and raw_value < 100000:
+            index_value = raw_value / 1000
+        else:
+            index_value = raw_value
+        quote_time = _format_quote_time(d.get("f124"))
+        return {
+            "index_code": index_code,
+            "index_name": index_name,
+            "index_value": index_value,
+            "change_rate": round(change_rate, 2),
+            "quote_time": quote_time,
+            "trade_date": quote_time[:10] if quote_time else _quote_trade_date(d.get("f124")),
         }
-        async with session.get(url, params=params, headers=HEADERS_QUOTE, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-            content_type = resp.headers.get('Content-Type', '')
-            if 'json' not in content_type:
-                text = await resp.text()
-                try:
-                    data = json.loads(text)
-                except json.JSONDecodeError:
-                    return {}
-            else:
-                data = await resp.json()
-
-            if data.get("rc") == 0 and data.get("data"):
-                d = data["data"]
-                # For indices, f43 is the raw index value (not divided by 1000)
-                # f170 is change rate in basis points (÷100 for percentage)
-                raw_value = d.get("f43", 0)
-                change_rate = d.get("f170", 0) / 100.0
-                index_name = d.get("f58", "")
-                index_code_raw = d.get("f57", "")
-
-                # Detect if this is an index (large value) or a stock (small value)
-                # Indices have values > 100 typically, stocks have prices < 1000 yuan
-                # For LOF fund codes (6 digits), raw values are price*1000
-                # For indices, raw values are the actual index points
-                # We check: if the code is 6 digits AND value < 100000, treat as price (÷1000)
-                # Otherwise treat as index value (no division)
-                if len(index_code_raw) == 6 and raw_value < 100000:
-                    index_value = raw_value / 1000
-                else:
-                    index_value = raw_value
-
-                quote_time = _format_quote_time(d.get("f124"))
-                return {
-                    "index_code": index_code,
-                    "index_name": index_name,
-                    "index_value": index_value,
-                    "change_rate": round(change_rate, 2),
-                    "quote_time": quote_time,
-                    "trade_date": quote_time[:10] if quote_time else _quote_trade_date(d.get("f124")),
-                }
     except Exception as e:
         logger.error(f"Error fetching index info for {index_code}: {e}")
     return {}
@@ -637,11 +636,7 @@ async def fetch_us_stock_change_info(session: aiohttp.ClientSession, em_code: st
             d = await _fetch_push2_quote(session, secid, "f43,f44,f45,f46,f57,f58,f169,f170,f124", timeout=10, retries=2)
             if not d:
                 continue
-            change_rate = d.get("f170", 0)
-            if change_rate in (None, "-"):
-                change_rate_val = 0.0
-            else:
-                change_rate_val = float(change_rate) / 100.0
+            change_rate_val = _num(d.get("f170")) / 100.0
             quote_time = _format_quote_time(d.get("f124"))
             return {
                 "em_code": secid,
@@ -670,75 +665,35 @@ async def fetch_us_stock_change_rate(session: aiohttp.ClientSession, em_code: st
 
 
 async def fetch_us_index_info(session: aiohttp.ClientSession, us_index_code: str) -> dict:
-    """Fetch US index/commodity name and change rate from eastmoney push2 API.
-    
-    Supported secid formats:
-    - Stock indices: 100.NDX (NASDAQ 100), 100.DJIA (Dow Jones), 100.SPX (S&P 500), 100.HSCEI (Hang Seng CEI)
-    - Commodity futures: 101.GC00Y (COMEX Gold), 102.CL00Y (NYMEX Crude Oil), 101.SI00Y (COMEX Silver)
-    - US ETFs: 105.NFTY (First Trust India NIFTY 50), 107.SLV (iShares Silver ETF), etc.
-    
-    Returns dict with index_name, index_value, change_rate.
-    During non-trading hours, may return 0% change.
-    """
+    """Fetch US/global index, ETF or commodity quote from EastMoney push2 API."""
     try:
-        url = "http://push2delay.eastmoney.com/api/qt/stock/get"
-        params = {
-            "secid": us_index_code,
-            "fields": "f43,f44,f45,f57,f58,f169,f170,f124"
+        d = await _fetch_push2_quote(session, us_index_code, "f43,f44,f45,f57,f58,f169,f170,f124", timeout=8, retries=2)
+        if not d:
+            return {}
+        raw_value = _num(d.get("f43"))
+        change_rate = _num(d.get("f170")) / 100.0
+        index_name = d.get("f58", "")
+        index_code_raw = str(d.get("f57", "") or "")
+        market_code = us_index_code.split(".")[0] if "." in us_index_code else ""
+
+        if market_code == "100":
+            index_value = raw_value / 1000 if raw_value < 100000 and len(index_code_raw) <= 6 else raw_value
+        elif market_code in ("101", "102", "112"):
+            index_value = raw_value / 1000
+        elif market_code in ("105", "107"):
+            index_value = raw_value / 100
+        else:
+            index_value = raw_value / 1000 if raw_value < 100000 and len(index_code_raw) <= 6 else raw_value
+
+        quote_time = _format_quote_time(d.get("f124"))
+        return {
+            "index_code": us_index_code,
+            "index_name": index_name,
+            "index_value": round(index_value, 2),
+            "change_rate": round(change_rate, 2),
+            "quote_time": quote_time,
+            "trade_date": quote_time[:10] if quote_time else _quote_trade_date(d.get("f124")),
         }
-        async with session.get(url, params=params, headers=HEADERS_QUOTE, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-            content_type = resp.headers.get('Content-Type', '')
-            if 'json' not in content_type:
-                text = await resp.text()
-                try:
-                    data = json.loads(text)
-                except json.JSONDecodeError:
-                    return {}
-            else:
-                data = await resp.json()
-
-            if data.get("rc") == 0 and data.get("data"):
-                d = data["data"]
-                raw_value = d.get("f43", 0)
-                change_rate = d.get("f170", 0) / 100.0
-                index_name = d.get("f58", "")
-                index_code_raw = d.get("f57", "")
-
-                # Determine value scaling based on market code
-                market_code = us_index_code.split(".")[0] if "." in us_index_code else ""
-                
-                if market_code == "100":
-                    # Stock indices (NASDAQ, S&P, Dow, HSCEI, etc.)
-                    # Values are typically large (1000+), no division needed
-                    if raw_value < 100000 and len(index_code_raw) <= 6:
-                        index_value = raw_value / 1000
-                    else:
-                        index_value = raw_value
-                elif market_code in ("101", "102", "112"):
-                    # Commodity futures (COMEX Gold 101.GC00Y, NYMEX Oil 102.CL00Y, Brent 112.B00Y)
-                    # Values are price * 1000 (e.g., 46062 = $46.062 for gold per oz * 1000... actually 3300620 = 3300.62)
-                    # These use the same /1000 convention as stocks
-                    index_value = raw_value / 1000
-                elif market_code in ("105", "107"):
-                    # US ETFs (105.NFTY, 107.SLV, etc.)
-                    # Prices are in cents (value * 100)
-                    index_value = raw_value / 100
-                else:
-                    # Unknown market code, try heuristic
-                    if raw_value < 100000 and len(index_code_raw) <= 6:
-                        index_value = raw_value / 1000
-                    else:
-                        index_value = raw_value
-
-                quote_time = _format_quote_time(d.get("f124"))
-                return {
-                    "index_code": us_index_code,
-                    "index_name": index_name,
-                    "index_value": round(index_value, 2),
-                    "change_rate": round(change_rate, 2),
-                    "quote_time": quote_time,
-                    "trade_date": quote_time[:10] if quote_time else _quote_trade_date(d.get("f124")),
-                }
     except Exception as e:
         logger.error(f"Error fetching US index info for {us_index_code}: {e}")
     return {}
@@ -768,24 +723,11 @@ async def fetch_fx_change_rate(session: aiohttp.ClientSession, pair: str) -> flo
         "HKDCNH": ["133.HKDCNH", "133.HKDCNY", "119.HKDCNH"],
     }.get(pair, [pair if "." in pair else f"133.{pair}"])
 
-    url = "http://push2delay.eastmoney.com/api/qt/stock/get"
     for secid in candidates:
         try:
-            params = {"secid": secid, "fields": "f43,f57,f58,f169,f170"}
-            async with session.get(url, params=params, headers=HEADERS_QUOTE, timeout=aiohttp.ClientTimeout(total=5)) as resp:
-                content_type = resp.headers.get('Content-Type', '')
-                if 'json' not in content_type:
-                    text = await resp.text()
-                    try:
-                        data = json.loads(text)
-                    except json.JSONDecodeError:
-                        continue
-                else:
-                    data = await resp.json()
-                if data.get("rc") == 0 and data.get("data"):
-                    change_rate = data["data"].get("f170", 0)
-                    if change_rate not in (None, "-"):
-                        return float(change_rate) / 100.0
+            d = await _fetch_push2_quote(session, secid, "f43,f57,f58,f169,f170", timeout=5, retries=1)
+            if d:
+                return _num(d.get("f170")) / 100.0
         except Exception as e:
             logger.debug(f"Error fetching FX change for {pair} via {secid}: {e}")
             continue
