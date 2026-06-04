@@ -1,4 +1,4 @@
-name: LOF Fund Monitor v2.3L 09:30-15:00 CST
+name: LOF Fund Monitor v2.6L 09:30-15:00 CST
 
 on:
   schedule:
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   monitor:
-    name: Run LOF monitor v2.3L until 15:00 CST
+    name: Run LOF monitor v2.6L until 15:00 CST
     runs-on: ubuntu-latest
     timeout-minutes: 340
 
@@ -44,6 +44,12 @@ jobs:
       AKSHARE_FUND_HTTP_TIMEOUT: ${{ vars.AKSHARE_FUND_HTTP_TIMEOUT }}
       AKSHARE_FUND_HTTP_RETRIES: ${{ vars.AKSHARE_FUND_HTTP_RETRIES }}
       AKSHARE_FUND_RETRY_SLEEP: ${{ vars.AKSHARE_FUND_RETRY_SLEEP }}
+      AKSHARE_AUTO_ADD_NON_ETF_FUNDS: ${{ vars.AKSHARE_AUTO_ADD_NON_ETF_FUNDS }}
+      DATA_REFRESH_CONCURRENCY: ${{ vars.DATA_REFRESH_CONCURRENCY }}
+      DATA_FETCH_HTTP_LIMIT: ${{ vars.DATA_FETCH_HTTP_LIMIT }}
+      DATA_REFRESH_BATCH_SAVE_SIZE: ${{ vars.DATA_REFRESH_BATCH_SAVE_SIZE }}
+      FETCHER_REQUEST_CACHE_TTL: ${{ vars.FETCHER_REQUEST_CACHE_TTL }}
+      WECHAT_STATUS_FALLBACK_CONCURRENCY: ${{ vars.WECHAT_STATUS_FALLBACK_CONCURRENCY }}
       RUN_UNTIL: ${{ inputs.run_until || '15:00' }}
 
     steps:
