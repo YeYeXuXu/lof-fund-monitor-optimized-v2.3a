@@ -20,9 +20,6 @@ Embedded AkShare methods:
   funds that can be monitored without a holdings-based valuation model.
 - ``fund_purchase_em``: EastMoney/Tiantian batch purchase/redemption status and
   latest official NAV.
-- ``fund_etf_fund_info_em``: EastMoney exchange-traded fund historical NAV
-  detail.  Used as a per-fund AkShare-compatible status fallback for REIT/LOF
-  rows not returned by the batch purchase-status table.
 
 When AkShare cannot provide direct f402 or all data needed for local
 premium/discount calculation, callers keep using existing project-specific
@@ -54,7 +51,6 @@ AKSHARE_PAGE_SIZE = max(100, int(os.environ.get("AKSHARE_FUND_PAGE_SIZE", "5000"
 AKSHARE_ESTIMATION_TIMEOUT_SECONDS = max(2.0, float(os.environ.get("AKSHARE_FUND_ESTIMATION_TIMEOUT", "8") or 8))
 AKSHARE_ESTIMATION_PAGE_SIZE = max(1000, int(os.environ.get("AKSHARE_FUND_ESTIMATION_PAGE_SIZE", "20000") or 20000))
 AKSHARE_EXCHANGE_DAILY_TIMEOUT_SECONDS = max(3, int(os.environ.get("AKSHARE_EXCHANGE_DAILY_TIMEOUT", "8") or 8))
-AKSHARE_FUND_INFO_TIMEOUT_SECONDS = max(3, int(os.environ.get("AKSHARE_FUND_INFO_TIMEOUT", "8") or 8))
 
 HEADERS_QUOTE = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -87,7 +83,6 @@ _LOF_SPOT_URLS = (
 _FUND_VALUE_ESTIMATION_URL = "https://api.fund.eastmoney.com/FundGuZhi/GetFundGZList"
 _FUND_PURCHASE_STATUS_URL = "https://fund.eastmoney.com/Data/Fund_JJJZ_Data.aspx"
 _FUND_EXCHANGE_DAILY_URL = "https://fund.eastmoney.com/cnjy_dwjz.html"
-_FUND_ETF_FUND_INFO_URL = "https://api.fund.eastmoney.com/f10/lsjz"
 _FUND_NAME_SEARCH_URL = "https://fund.eastmoney.com/js/fundcode_search.js"
 
 _COMMON_CLIST_PARAMS = {
@@ -221,7 +216,7 @@ def _clean_akshare_fund_name(value: Any) -> str:
 
 
 def _is_etf_like(fund_name: Any, fund_type: Any = "") -> bool:
-    """Return True for ETF rows that should be excluded by v2.8L discovery."""
+    """Return True for ETF rows that should be excluded by v2.7L discovery."""
     text = f"{fund_name or ''} {fund_type or ''}".upper()
     compact = re.sub(r"\s+", "", text)
     return "ETF" in compact or "交易型开放式指数" in compact
@@ -826,7 +821,7 @@ async def fetch_akshare_exchange_daily_snapshot(
     """Fetch non-ETF exchange-traded fund rows with direct discount-rate data.
 
     This mirrors AkShare ``fund_etf_fund_daily_em`` but intentionally filters out
-    ETF rows.  The remaining rows are useful for v2.8L auto-add because the table
+    ETF rows.  The remaining rows are useful for v2.7L auto-add because the table
     supplies a direct ``折价率`` field, while ``fund_value_estimation_em`` supplies
     the direct estimated NAV.
     """
@@ -862,7 +857,7 @@ async def fetch_akshare_exchange_daily_snapshot(
 def build_akshare_addable_funds(snapshot: dict[str, Any] | None) -> list[dict[str, Any]]:
     """Build default-fund rows that can be monitored directly by AkShare.
 
-    Eligibility for v2.8L:
+    Eligibility for v2.7L:
     - appears in the non-ETF subset of AkShare ``fund_etf_fund_daily_em`` and has
       a direct ``折价率`` value;
     - also appears in ``fund_value_estimation_em`` with a positive estimated NAV;
@@ -988,99 +983,6 @@ async def fetch_akshare_fund_purchase_status(
         logger.warning("AkShare adapter fund_purchase_em unavailable: %s", _fmt_exc(exc))
         return {}
 
-
-
-
-def _normalize_exchange_fund_status_item(item: Any) -> dict[str, Any] | None:
-    """Normalize one latest row from AkShare fund_etf_fund_info_em."""
-    if isinstance(item, dict):
-        raw_nav_date = item.get("净值日期") or item.get("FSRQ") or item.get("nav_date")
-        raw_nav = item.get("单位净值") or item.get("DWJZ") or item.get("nav")
-        raw_change = item.get("日增长率") or item.get("JZZZL") or item.get("daily_change_rate")
-        raw_purchase = item.get("申购状态") or item.get("SGZT") or item.get("purchase_status")
-        raw_redeem = item.get("赎回状态") or item.get("SHZT") or item.get("redeem_status")
-    elif isinstance(item, (list, tuple)):
-        # AkShare fund_etf_fund_info_em maps the lsjz list columns to:
-        # 净值日期, 单位净值, 累计净值, _, _, _, 日增长率, 申购状态, 赎回状态, ...
-        raw_nav_date = item[0] if len(item) > 0 else ""
-        raw_nav = item[1] if len(item) > 1 else None
-        raw_change = item[6] if len(item) > 6 else None
-        raw_purchase = item[7] if len(item) > 7 else None
-        raw_redeem = item[8] if len(item) > 8 else None
-    else:
-        return None
-
-    purchase_status = _normalize_purchase_status(raw_purchase)
-    redeem_status = _normalize_redeem_status(raw_redeem)
-    nav = _to_float(raw_nav, 0.0)
-    daily_change_rate = _to_float(raw_change, 0.0)
-    if not (_status_is_known(purchase_status) or _status_is_known(redeem_status) or nav > 0):
-        return None
-    return {
-        "nav": nav,
-        "nav_date": str(raw_nav_date or "").strip(),
-        "daily_change_rate": daily_change_rate,
-        "purchase_status": purchase_status,
-        "redeem_status": redeem_status,
-        "raw_purchase_status": str(raw_purchase or "").strip(),
-        "raw_redeem_status": str(raw_redeem or "").strip(),
-    }
-
-
-async def fetch_akshare_exchange_fund_status(
-    session: aiohttp.ClientSession,
-    fund_code: str,
-) -> dict[str, Any]:
-    """Fetch per-fund status via AkShare fund_etf_fund_info_em.
-
-    The batch ``fund_purchase_em`` table can miss part of the REIT universe.
-    AkShare's ``fund_etf_fund_info_em`` reads EastMoney's ``f10/lsjz`` endpoint,
-    whose latest row includes 申购状态/赎回状态 for many exchange-traded funds and
-    REITs.  Callers should still fall back to the project's original page parser
-    when this method returns no known status.
-    """
-    code = _normalize_code(fund_code)
-    if not code:
-        return {}
-    params = {
-        "fundCode": code,
-        "pageIndex": "1",
-        "pageSize": "20",
-        "startDate": "",
-        "endDate": "",
-        "_": int(time.time() * 1000),
-    }
-    headers = {**HEADERS_FUND, "Referer": f"https://fundf10.eastmoney.com/jjjz_{code}.html"}
-    last_error = ""
-    for attempt in range(1, AKSHARE_HTTP_RETRIES + 1):
-        try:
-            data_json = await _request_json(
-                session,
-                _FUND_ETF_FUND_INFO_URL,
-                params,
-                headers,
-                timeout=AKSHARE_FUND_INFO_TIMEOUT_SECONDS,
-            )
-            data = data_json.get("Data") or {}
-            rows = data.get("LSJZList") or []
-            if not isinstance(rows, list) or not rows:
-                last_error = "empty LSJZList"
-                raise ValueError(last_error)
-            for item in rows:
-                normalized = _normalize_exchange_fund_status_item(item)
-                if normalized:
-                    normalized["fund_code"] = code
-                    normalized["source"] = "akshare.fund_etf_fund_info_em"
-                    return normalized
-            last_error = "no known status in latest LSJZ rows"
-            raise ValueError(last_error)
-        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, RuntimeError) as exc:
-            last_error = _fmt_exc(exc)
-            if attempt < AKSHARE_HTTP_RETRIES:
-                await asyncio.sleep(AKSHARE_RETRY_SLEEP_SECONDS * attempt)
-                continue
-    logger.debug("AkShare adapter fund_etf_fund_info_em unavailable for %s: %s", code, last_error or "empty response")
-    return {}
 
 async def fetch_akshare_estimation_snapshot(
     session: aiohttp.ClientSession,
