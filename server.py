@@ -1487,12 +1487,12 @@ def _build_threshold_alert_title(values: dict, conditions: list, alert_count: in
         title_parts.append(f"命中{alert_count}只/监控{monitor_total}只")
     elif alert_count > 0:
         title_parts.append(f"命中{alert_count}只")
-    if "premium_upper" in conditions:
-        title_parts.append(f"溢价≥{_format_push_percent(values['premium_upper'])}")
-    if "discount_lower" in conditions:
-        title_parts.append(f"折价≤{_format_push_percent(values['discount_lower'])}")
-    if values["min_turnover"] > 0:
-        title_parts.append(f"成交≥{values['min_turnover']:g}万")
+    # if "premium_upper" in conditions:
+    #     title_parts.append(f"溢价≥{_format_push_percent(values['premium_upper'])}")
+    # if "discount_lower" in conditions:
+    #     title_parts.append(f"折价≤{_format_push_percent(values['discount_lower'])}")
+    # if values["min_turnover"] > 0:
+    #     title_parts.append(f"成交≥{values['min_turnover']:g}万")
     return "｜".join(title_parts)
 
 
