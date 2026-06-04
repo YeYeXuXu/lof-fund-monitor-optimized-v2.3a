@@ -303,7 +303,7 @@ async def init_db():
             except Exception:
                 pass  # Column already exists
 
-        # v2.6L compatibility: older threshold alerts could be scheduled even
+        # v2.7L compatibility: older threshold alerts could be scheduled even
         # when push_enabled was 0. Preserve those existing alert schedules while
         # no longer allowing push_enabled to trigger any summary push.
         await db.execute("""
@@ -756,6 +756,75 @@ async def get_funds_needing_holdings_refresh(hours: int = 24, holdings_type: str
 
 
 # ============ WeChat Push Config ============
+
+async def update_fund_metadata_from_lookup(metadata: dict, only_codes: set[str] | None = None) -> int:
+    """Update weak/default fund metadata from an AkShare/EastMoney lookup.
+
+    This is intentionally conservative: it does not overwrite curated existing
+    fund names or manually configured algorithm/index settings.  It only fills
+    obviously placeholder names and improves domestic -> hk/overseas category
+    when the current algorithm is still the generic holdings fallback.
+    """
+    if not metadata:
+        return 0
+
+    db = await get_db()
+    changed = 0
+    try:
+        cursor = await db.execute("SELECT fund_code, fund_name, market, algo_type, category, industry_index_code, us_index_code FROM funds")
+        rows = await cursor.fetchall()
+        for row in rows:
+            code = row["fund_code"]
+            if only_codes is not None and code not in only_codes:
+                continue
+            item = metadata.get(code) or {}
+            if not item:
+                continue
+
+            current_name = str(row["fund_name"] or "").strip()
+            new_name = str(item.get("fund_name") or "").strip()
+            should_update_name = bool(new_name) and (
+                not current_name
+                or current_name == code
+                or current_name == f"基金{code}"
+                or current_name.startswith("待联网补全")
+            )
+
+            current_category = str(row["category"] or "domestic")
+            current_algo = str(row["algo_type"] or "holdings")
+            new_category = str(item.get("category") or current_category)
+            new_algo = str(item.get("algo_type") or current_algo)
+            should_update_category = (
+                current_category in {"", "domestic"}
+                and new_category in {"hk", "overseas"}
+                and current_algo in {"", "holdings"}
+                and not row["industry_index_code"]
+                and not row["us_index_code"]
+            )
+
+            if not should_update_name and not should_update_category:
+                continue
+
+            await db.execute(
+                """
+                UPDATE funds
+                SET fund_name = ?, market = ?, algo_type = ?, category = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE fund_code = ?
+                """,
+                (
+                    new_name if should_update_name else current_name,
+                    item.get("market") or row["market"] or ("sh" if code.startswith("5") else "sz"),
+                    new_algo if should_update_category else current_algo,
+                    new_category if should_update_category else current_category,
+                    code,
+                ),
+            )
+            changed += 1
+        await db.commit()
+        return changed
+    finally:
+        await db.close()
+
 
 async def get_wechat_config() -> dict:
     """Get the WeChat push configuration."""

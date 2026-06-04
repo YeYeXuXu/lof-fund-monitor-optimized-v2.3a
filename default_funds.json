@@ -1690,5 +1690,2534 @@
     "category": "domestic",
     "industry_index_code": "",
     "us_index_code": ""
+  },
+  {
+    "fund_code": "501001",
+    "fund_name": "财通精选混合LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501006",
+    "fund_name": "精准医C",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501008",
+    "fund_name": "互联网医疗LOFC",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501012",
+    "fund_name": "中药基金LOFC",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501017",
+    "fund_name": "国泰融丰LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501022",
+    "fund_name": "银华鑫盛LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501023",
+    "fund_name": "港中小企LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "hk",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501028",
+    "fund_name": "财通福瑞混合LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501030",
+    "fund_name": "环境治理LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501031",
+    "fund_name": "环境治理LOFC",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501032",
+    "fund_name": "财通福盛混合LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501038",
+    "fund_name": "银华明择",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501045",
+    "fund_name": "沪深300LOFC",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501047",
+    "fund_name": "证券公司LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501048",
+    "fund_name": "证券公司LOFC",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501051",
+    "fund_name": "圆信永丰汇利LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501053",
+    "fund_name": "东方红目标优选",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501057",
+    "fund_name": "新能源车LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501059",
+    "fund_name": "国企红利LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501060",
+    "fund_name": "金选300A类LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501061",
+    "fund_name": "金选300C类LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501065",
+    "fund_name": "经典成长",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501070",
+    "fund_name": "广发睿阳",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501071",
+    "fund_name": "泓德丰泽LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501075",
+    "fund_name": "科创主题LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501076",
+    "fund_name": "鹏华创新动力LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501077",
+    "fund_name": "富国创新企业LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501079",
+    "fund_name": "科创大成LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501083",
+    "fund_name": "科创银华LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501085",
+    "fund_name": "财通科创LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501087",
+    "fund_name": "交银瑞丰LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501088",
+    "fund_name": "嘉实瑞虹",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501091",
+    "fund_name": "嘉实欣荣LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501092",
+    "fund_name": "交银瑞思LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501093",
+    "fund_name": "华夏翔阳LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501098",
+    "fund_name": "科创建信LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501099",
+    "fund_name": "平安新兴产业LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501186",
+    "fund_name": "华夏兴融LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501188",
+    "fund_name": "添富核心精选LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501189",
+    "fund_name": "嘉实产业优选LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501202",
+    "fund_name": "华泰创新先锋LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501206",
+    "fund_name": "添富创新未来LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501209",
+    "fund_name": "富久食品饮料LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501211",
+    "fund_name": "民生加银优享FOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501212",
+    "fund_name": "广发优选配置FOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501213",
+    "fund_name": "中欧汇选FOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501215",
+    "fund_name": "积极配置FOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501216",
+    "fund_name": "富国行业精选FOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501217",
+    "fund_name": "行业配置FOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501218",
+    "fund_name": "工银睿智进取FOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501220",
+    "fund_name": "行业轮动FOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501222",
+    "fund_name": "如意招享FOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501307",
+    "fund_name": "沪港深红利LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "501310",
+    "fund_name": "价值基金LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "502000",
+    "fund_name": "500增强LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "502006",
+    "fund_name": "国企改革LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "502013",
+    "fund_name": "一带一路LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "502048",
+    "fund_name": "上证50LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "502056",
+    "fund_name": "医疗基金LOF",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508000",
+    "fund_name": "华安张江产业园REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508001",
+    "fund_name": "浙商沪杭甬REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508002",
+    "fund_name": "华安百联消费REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508003",
+    "fund_name": "中金联东科创REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508005",
+    "fund_name": "华夏首创奥莱REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508006",
+    "fund_name": "富国首创水务REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508007",
+    "fund_name": "中金山东高速REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508008",
+    "fund_name": "国金中国铁建REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508009",
+    "fund_name": "中金安徽交控REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508010",
+    "fund_name": "中金重庆两江REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508011",
+    "fund_name": "嘉实物美消费REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508012",
+    "fund_name": "招商科创REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508015",
+    "fund_name": "中信建投明阳智能新能源REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508016",
+    "fund_name": "华夏华电清洁能源REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508017",
+    "fund_name": "华夏金茂消费REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508018",
+    "fund_name": "华夏中国交建REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508019",
+    "fund_name": "中金湖北科投光谷REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508020",
+    "fund_name": "东方红隧道股份高速公路REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508021",
+    "fund_name": "国泰海通临港创新产业园REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508022",
+    "fund_name": "博时津开产园REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508026",
+    "fund_name": "嘉实中国电建清洁能源REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508027",
+    "fund_name": "东吴苏园产业REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508028",
+    "fund_name": "中信建投国家电投新能源REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508029",
+    "fund_name": "中信建投沈阳国际软件园REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508031",
+    "fund_name": "国泰海通城投宽庭保租房REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508033",
+    "fund_name": "易方达深高速REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508036",
+    "fund_name": "平安宁波交投REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508039",
+    "fund_name": "创金合信首农REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508048",
+    "fund_name": "华安外高桥REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508050",
+    "fund_name": "华夏中核清洁能源REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508055",
+    "fund_name": "汇添富上海地产租赁住房REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508056",
+    "fund_name": "中金普洛斯REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508058",
+    "fund_name": "中金厦门安居REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508060",
+    "fund_name": "南方万国数据中心REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508066",
+    "fund_name": "华泰江苏交控REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508068",
+    "fund_name": "华夏北京保障房REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508069",
+    "fund_name": "华夏南京交通高速公路REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508077",
+    "fund_name": "华夏基金华润有巢REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508078",
+    "fund_name": "中航易商仓储物流REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508080",
+    "fund_name": "中金亦庄产业园REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508082",
+    "fund_name": "中金唯品会奥莱REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508084",
+    "fund_name": "汇添富九州通医药REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508085",
+    "fund_name": "华泰苏州恒泰租赁住房REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508086",
+    "fund_name": "工银河北高速REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508087",
+    "fund_name": "国泰海通济南能源供热REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508088",
+    "fund_name": "国泰海通东久新经济REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508089",
+    "fund_name": "华夏特变电工新能源REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508090",
+    "fund_name": "中银中外运仓储物流REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508091",
+    "fund_name": "华夏凯德消费REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508092",
+    "fund_name": "华夏金隅智造工场REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508093",
+    "fund_name": "易方达广西北投高速REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508096",
+    "fund_name": "中航京能国际能源REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508097",
+    "fund_name": "华泰南京建邺REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508098",
+    "fund_name": "嘉实京东仓储基础设施REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "508099",
+    "fund_name": "建信中关村REIT",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "519800",
+    "fund_name": "-",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "519801",
+    "fund_name": "-",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "519858",
+    "fund_name": "-",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "519859",
+    "fund_name": "-",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "519878",
+    "fund_name": "-",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "519879",
+    "fund_name": "-",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "519888",
+    "fund_name": "-",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "519889",
+    "fund_name": "-",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "519898",
+    "fund_name": "-",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "519899",
+    "fund_name": "-",
+    "market": "sh",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162721",
+    "fund_name": "广发积极FOF-LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161133",
+    "fund_name": "优势回报FOF-LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160326",
+    "fund_name": "优选配置FOF-LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "163418",
+    "fund_name": "兴全合兴LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160143",
+    "fund_name": "创业板定开南方",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160529",
+    "fund_name": "创业板博时定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162412",
+    "fund_name": "医疗基金LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "165515",
+    "fund_name": "中信保诚300LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "165519",
+    "fund_name": "医药生物科技LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "165521",
+    "fund_name": "金融LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "166027",
+    "fund_name": "中欧创业定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160325",
+    "fund_name": "华夏创业板定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161040",
+    "fund_name": "创业富国定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "163115",
+    "fund_name": "申万军工LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160219",
+    "fund_name": "医药LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160222",
+    "fund_name": "食品LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160625",
+    "fund_name": "证保LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160628",
+    "fund_name": "地产LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160631",
+    "fund_name": "银行LOF基金",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160633",
+    "fund_name": "券商LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160638",
+    "fund_name": "带路LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160639",
+    "fund_name": "高铁LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160926",
+    "fund_name": "创业板定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161024",
+    "fund_name": "军工LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161123",
+    "fund_name": "并购重组LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162509",
+    "fund_name": "中证A100LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161122",
+    "fund_name": "生物科技LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161811",
+    "fund_name": "沪深300LOF银华",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161816",
+    "fund_name": "中证90LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160127",
+    "fund_name": "南方消费LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "163116",
+    "fund_name": "申万电子LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160527",
+    "fund_name": "博时研究优选LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "167508",
+    "fund_name": "安信价值发现定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161837",
+    "fund_name": "银华大盘定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164508",
+    "fund_name": "国富中证A100LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161729",
+    "fund_name": "招商瑞利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "167302",
+    "fund_name": "大湾区LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162216",
+    "fund_name": "宏利500增强LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160526",
+    "fund_name": "博时优势企业",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161118",
+    "fund_name": "中小企业100LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161029",
+    "fund_name": "银行龙头LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "166025",
+    "fund_name": "中欧远见定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160142",
+    "fund_name": "南方优势产业LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160925",
+    "fund_name": "沪深港300LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161131",
+    "fund_name": "易方达科润LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161728",
+    "fund_name": "招商优选LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "169106",
+    "fund_name": "东方红创优定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161014",
+    "fund_name": "富国汇利定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "166024",
+    "fund_name": "中欧恒利定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "166023",
+    "fund_name": "中欧瑞丰LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161038",
+    "fund_name": "成长LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164509",
+    "fund_name": "国富恒利债券LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161036",
+    "fund_name": "娱乐增强LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "169201",
+    "fund_name": "浙商鼎盈LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160323",
+    "fund_name": "华夏磐泰LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161233",
+    "fund_name": "国投瑞泰LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "168301",
+    "fund_name": "东海祥龙LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161626",
+    "fund_name": "融通通福LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "168105",
+    "fund_name": "九泰泰富LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "168104",
+    "fund_name": "九泰锐丰LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160722",
+    "fund_name": "嘉实惠泽LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "165525",
+    "fund_name": "基建工程LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164703",
+    "fund_name": "汇添富纯债LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161035",
+    "fund_name": "医药增强LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "168103",
+    "fund_name": "九泰锐益LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160921",
+    "fund_name": "多策略LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "167001",
+    "fund_name": "鼎泰LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164210",
+    "fund_name": "天弘同利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160642",
+    "fund_name": "鹏华增瑞LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161834",
+    "fund_name": "银华鑫锐LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "165528",
+    "fund_name": "中信保诚鼎利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161232",
+    "fund_name": "国投瑞盛LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160635",
+    "fund_name": "医药LOF基金",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "163003",
+    "fund_name": "长信利鑫LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161727",
+    "fund_name": "招商增荣LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162215",
+    "fund_name": "宏利聚利债券LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160622",
+    "fund_name": "鹏华丰利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "168102",
+    "fund_name": "九泰锐富LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "163005",
+    "fund_name": "长信利众LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "163907",
+    "fund_name": "中海惠裕LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "166016",
+    "fund_name": "中欧纯债LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164206",
+    "fund_name": "天弘添利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160641",
+    "fund_name": "鹏华丰锐LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "168101",
+    "fund_name": "九泰锐智LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "167501",
+    "fund_name": "安信宝利债券LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160806",
+    "fund_name": "长盛中证800LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161722",
+    "fund_name": "招商丰泰LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162414",
+    "fund_name": "新机遇LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "166105",
+    "fund_name": "信澳鑫安LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162108",
+    "fund_name": "金鹰元盛债券LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161224",
+    "fund_name": "国投新丝路LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161222",
+    "fund_name": "国投瑞利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "165517",
+    "fund_name": "中信保诚双盈LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164705",
+    "fund_name": "恒生LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "hk",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162105",
+    "fund_name": "金鹰持久增利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160919",
+    "fund_name": "产业升级LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "166401",
+    "fund_name": "稳健增利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160618",
+    "fund_name": "鹏华丰泽LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164208",
+    "fund_name": "天弘丰利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160513",
+    "fund_name": "稳健债LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161908",
+    "fund_name": "万家添利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161015",
+    "fund_name": "富国天盈LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161505",
+    "fund_name": "银河通利债券LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160918",
+    "fund_name": "中小盘LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164814",
+    "fund_name": "工银双债LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160515",
+    "fund_name": "安丰18定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162715",
+    "fund_name": "广发聚源LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161119",
+    "fund_name": "易方达新综债LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164810",
+    "fund_name": "工银纯债定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161820",
+    "fund_name": "银华纯债LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161117",
+    "fund_name": "易基永旭添利定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "163819",
+    "fund_name": "中银信用增利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160128",
+    "fund_name": "南方金利定开",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "163821",
+    "fund_name": "沪深300等权LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161019",
+    "fund_name": "富国天锋LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161614",
+    "fund_name": "融通四季添利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161219",
+    "fund_name": "国投新兴产业LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164606",
+    "fund_name": "信用增利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162712",
+    "fund_name": "广发聚利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "165512",
+    "fund_name": "中信保诚机遇LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "165311",
+    "fund_name": "信用债LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160512",
+    "fund_name": "博时卓越LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161216",
+    "fund_name": "国投双债LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "166009",
+    "fund_name": "中欧动力LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164902",
+    "fund_name": "交银添利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164808",
+    "fund_name": "工银四季LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "166008",
+    "fund_name": "中欧强债LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "163407",
+    "fund_name": "兴全沪深300LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160617",
+    "fund_name": "鹏华丰润LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161115",
+    "fund_name": "易基岁丰添利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "165509",
+    "fund_name": "中信保诚增强LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "164105",
+    "fund_name": "华富强债LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "165508",
+    "fund_name": "中信保诚深度LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160807",
+    "fund_name": "长盛沪深300LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161713",
+    "fund_name": "招商信用添利LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160616",
+    "fund_name": "鹏华500LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "163001",
+    "fund_name": "长信医疗LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "166006",
+    "fund_name": "中欧成长LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160716",
+    "fund_name": "基本面50LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162307",
+    "fund_name": "海富通A100LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162711",
+    "fund_name": "中证500LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "165309",
+    "fund_name": "沪深300LOF建信",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160119",
+    "fund_name": "500ETF联接LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160615",
+    "fund_name": "鹏华300LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161010",
+    "fund_name": "富国天丰LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160314",
+    "fund_name": "华夏行业LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160910",
+    "fund_name": "创新成长LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "163503",
+    "fund_name": "天治核心LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160611",
+    "fund_name": "鹏华优质治理LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "163302",
+    "fund_name": "大摩资源LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160805",
+    "fund_name": "长盛同智LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162207",
+    "fund_name": "宏利效率混合LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "162607",
+    "fund_name": "景顺资源LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161706",
+    "fund_name": "招商成长LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160106",
+    "fund_name": "南方高增LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "161607",
+    "fund_name": "巨潮100LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
+  },
+  {
+    "fund_code": "160105",
+    "fund_name": "南方积配LOF",
+    "market": "sz",
+    "algo_type": "holdings",
+    "category": "domestic",
+    "industry_index_code": "",
+    "us_index_code": ""
   }
 ]

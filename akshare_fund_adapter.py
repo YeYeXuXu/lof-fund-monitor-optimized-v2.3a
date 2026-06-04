@@ -83,6 +83,7 @@ _LOF_SPOT_URLS = (
 _FUND_VALUE_ESTIMATION_URL = "https://api.fund.eastmoney.com/FundGuZhi/GetFundGZList"
 _FUND_PURCHASE_STATUS_URL = "https://fund.eastmoney.com/Data/Fund_JJJZ_Data.aspx"
 _FUND_EXCHANGE_DAILY_URL = "https://fund.eastmoney.com/cnjy_dwjz.html"
+_FUND_NAME_SEARCH_URL = "https://fund.eastmoney.com/js/fundcode_search.js"
 
 _COMMON_CLIST_PARAMS = {
     "pn": "1",
@@ -215,7 +216,7 @@ def _clean_akshare_fund_name(value: Any) -> str:
 
 
 def _is_etf_like(fund_name: Any, fund_type: Any = "") -> bool:
-    """Return True for ETF rows that should be excluded by v2.6L discovery."""
+    """Return True for ETF rows that should be excluded by v2.7L discovery."""
     text = f"{fund_name or ''} {fund_type or ''}".upper()
     compact = re.sub(r"\s+", "", text)
     return "ETF" in compact or "交易型开放式指数" in compact
@@ -240,6 +241,89 @@ def _guess_fund_category(fund_name: Any, fund_type: Any = "") -> str:
 
 def _default_algo_for_category(category: str) -> str:
     return "overseas" if category == "overseas" else "holdings"
+
+
+def _parse_fund_name_search_js(text: str) -> list[list[Any]]:
+    """Parse EastMoney fundcode_search.js data used by AkShare fund_name_em.
+
+    The upstream AkShare method ``fund_name_em`` requests the same JavaScript
+    file and maps each row to 基金代码/拼音缩写/基金简称/基金类型/拼音全称.  Keeping the
+    parser here lets the monitor enrich spreadsheet-imported rows at runtime
+    without adding a heavyweight AkShare import to GitHub Actions.
+    """
+    raw = (text or "").strip()
+    if not raw:
+        return []
+    # Common shape: var r = [["000001","HXCZHH","华夏成长混合",...]];
+    match = re.search(r"var\s+r\s*=\s*(\[.*\])\s*;?\s*$", raw, flags=re.S)
+    if match:
+        raw = match.group(1)
+    else:
+        raw = raw.removeprefix("var r =").strip().rstrip(";")
+    try:
+        data = json.loads(raw)
+    except Exception:
+        # Some historical responses used single quotes or unescaped values.  Avoid
+        # failing startup because this is only metadata enrichment.
+        logger.warning("AkShare adapter fund_name_em parse failed: unexpected JS payload")
+        return []
+    if not isinstance(data, list):
+        return []
+    return [row for row in data if isinstance(row, list) and len(row) >= 4]
+
+
+async def fetch_akshare_fund_name_lookup(session: aiohttp.ClientSession) -> dict[str, dict[str, Any]]:
+    """Fetch all fund names/types with the AkShare ``fund_name_em`` method.
+
+    Source method in AkShare v1.18.64:
+    ``akshare.fund.fund_em.fund_name_em`` ->
+    ``https://fund.eastmoney.com/js/fundcode_search.js``.
+    """
+    try:
+        last_error = ""
+        for attempt in range(1, AKSHARE_HTTP_RETRIES + 1):
+            try:
+                async with session.get(
+                    _FUND_NAME_SEARCH_URL,
+                    headers=HEADERS_FUND,
+                    timeout=aiohttp.ClientTimeout(total=AKSHARE_HTTP_TIMEOUT),
+                ) as resp:
+                    raw = await resp.read()
+                    if resp.status != 200:
+                        last_error = f"HTTP {resp.status}"
+                        continue
+                    text = raw.decode("utf-8", errors="ignore")
+                    if "var r" not in text and raw:
+                        text = raw.decode("gb18030", errors="ignore")
+                    rows = _parse_fund_name_search_js(text)
+                    lookup: dict[str, dict[str, Any]] = {}
+                    for row in rows:
+                        code = _normalize_code(row[0])
+                        if not code:
+                            continue
+                        fund_name = _clean_akshare_fund_name(row[2])
+                        fund_type = str(row[3] or "").strip()
+                        category = _guess_fund_category(fund_name, fund_type)
+                        lookup[code] = {
+                            "fund_code": code,
+                            "fund_name": fund_name or code,
+                            "fund_type": fund_type,
+                            "market": _market_from_fund_code(code),
+                            "algo_type": _default_algo_for_category(category),
+                            "category": category,
+                            "metadata_source": "akshare.fund_name_em",
+                        }
+                    logger.info("AkShare adapter fund_name_em rows fetched: %s", len(lookup))
+                    return lookup
+            except Exception as exc:
+                last_error = _fmt_exc(exc)
+                if attempt < AKSHARE_HTTP_RETRIES:
+                    await asyncio.sleep(AKSHARE_RETRY_SLEEP_SECONDS * attempt)
+        logger.warning("AkShare adapter fund_name_em unavailable: %s", last_error or "empty response")
+        return {}
+    except Exception as exc:
+        logger.warning("AkShare adapter fund_name_em unavailable: %s", _fmt_exc(exc))
+        return {}
 
 def _format_data_date(value: Any) -> str:
     text = str(value or "").strip()
@@ -737,7 +821,7 @@ async def fetch_akshare_exchange_daily_snapshot(
     """Fetch non-ETF exchange-traded fund rows with direct discount-rate data.
 
     This mirrors AkShare ``fund_etf_fund_daily_em`` but intentionally filters out
-    ETF rows.  The remaining rows are useful for v2.6L auto-add because the table
+    ETF rows.  The remaining rows are useful for v2.7L auto-add because the table
     supplies a direct ``折价率`` field, while ``fund_value_estimation_em`` supplies
     the direct estimated NAV.
     """
@@ -773,7 +857,7 @@ async def fetch_akshare_exchange_daily_snapshot(
 def build_akshare_addable_funds(snapshot: dict[str, Any] | None) -> list[dict[str, Any]]:
     """Build default-fund rows that can be monitored directly by AkShare.
 
-    Eligibility for v2.6L:
+    Eligibility for v2.7L:
     - appears in the non-ETF subset of AkShare ``fund_etf_fund_daily_em`` and has
       a direct ``折价率`` value;
     - also appears in ``fund_value_estimation_em`` with a positive estimated NAV;

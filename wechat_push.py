@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 CST = timezone(timedelta(hours=8))
 SERVERCHAN_URL = "https://sctapi.ftqq.com"
-MODEL_VERSION_TEXT = "净值估值模型优化v2.6L"
+MODEL_VERSION_TEXT = "净值估值模型优化v2.7L"
 
 STATUS_ICON = {
     "开放": "✅",
@@ -292,7 +292,8 @@ def _source_suffix(fund: dict, metric: str) -> str:
 def build_threshold_alert_message(alerts: list, premium_upper: float = 3.0,
                                    discount_lower: float = -5.0,
                                    min_turnover: float = 60,
-                                   enabled_conditions: list | None = None) -> str:
+                                   enabled_conditions: list | None = None,
+                                   monitor_total: int | None = None) -> str:
     """Build alert message body with exact filter criteria (Chinese)."""
     now = datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -303,6 +304,9 @@ def build_threshold_alert_message(alerts: list, premium_upper: float = 3.0,
     lines.append(f"## ⚠️ 折溢价阈值告警\n")
     lines.append(f"**时间：** {now}  \n")
     lines.append(f"**版本：** {MODEL_VERSION_TEXT}  \n")
+    if monitor_total is not None:
+        lines.append(f"**监控基金总数：** {int(monitor_total)} 只  \n")
+    lines.append(f"**命中告警数量：** {len(alerts_sorted)} 只  \n")
 
     # Conditions
     lines.append("**触发条件：**  ")
@@ -319,7 +323,6 @@ def build_threshold_alert_message(alerts: list, premium_upper: float = 3.0,
         conds.append(f"折价率 ≤ {discount_lower}%")
     conds.append(f"成交金额 ≥ {int(min_turnover)} 万元")
     lines.append("  \n".join(conds))
-    lines.append(f"  \n**告警数量：** {len(alerts_sorted)} 只  \n")
     lines.append("")
 
     for a in alerts_sorted:

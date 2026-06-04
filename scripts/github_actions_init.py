@@ -22,8 +22,10 @@ from db import (  # noqa: E402
     init_db,
     save_wechat_config,
     seed_default_funds,
+    update_fund_metadata_from_lookup,
 )
 from wechat_push import parse_send_keys  # noqa: E402
+from akshare_fund_adapter import fetch_akshare_fund_name_lookup  # noqa: E402
 
 DEFAULT_PUSH_TIMES = "09:35,10:00,10:30,11:00,11:25,13:05,13:30,14:00,14:30,14:55"
 
@@ -85,6 +87,23 @@ def _collect_send_keys() -> list[str]:
     ])
 
 
+async def _refresh_metadata_from_akshare() -> int:
+    """Best-effort AkShare fund_name_em metadata enrichment for Actions."""
+    if _env("AKSHARE_REFRESH_FUND_METADATA", "1").lower() in {"0", "false", "no", "off", "disabled"}:
+        print("[OK] 已跳过 AkShare 基金元数据补全：AKSHARE_REFRESH_FUND_METADATA=0")
+        return 0
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            lookup = await fetch_akshare_fund_name_lookup(session)
+        changed = await update_fund_metadata_from_lookup(lookup) if lookup else 0
+        print(f"[OK] AkShare 基金元数据补全：lookup={len(lookup) if lookup else 0} changed={changed}")
+        return changed
+    except Exception as exc:
+        print(f"[WARN] AkShare 基金元数据补全失败，继续使用 default_funds.json：{type(exc).__name__}: {exc}")
+        return 0
+
+
 async def main() -> None:
     send_keys = _collect_send_keys()
     send_key_text = "\n".join(send_keys)
@@ -95,6 +114,7 @@ async def main() -> None:
 
     await init_db()
     await seed_default_funds()
+    await _refresh_metadata_from_akshare()
 
     config = await get_wechat_config()
 

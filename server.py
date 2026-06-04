@@ -22,13 +22,15 @@ from db import (init_db, seed_default_funds, get_all_funds, get_fund, add_fund, 
     get_all_realtime, get_realtime, get_algo_configs, save_overseas_holdings,
     get_overseas_holdings, get_all_overseas_holdings_map, batch_add_funds,
     update_holdings_timestamp, get_funds_needing_holdings_refresh,
-    get_wechat_config, save_wechat_config, claim_wechat_push_slot, mark_wechat_push_slot)
+    get_wechat_config, save_wechat_config, claim_wechat_push_slot, mark_wechat_push_slot,
+    update_fund_metadata_from_lookup)
 from fetcher import fetch_all_fund_data, fetch_fund_info, fetch_overseas_holdings, fetch_fund_holdings, fetch_fund_nav_from_lsjz
 from estimator import estimate_nav_unified
 from wechat_push import send_wechat_message, build_threshold_alert_message, mask_send_keys, parse_send_keys
 from akshare_fund_adapter import (
     get_akshare_fund_snapshot, apply_akshare_fund_data_to_result,
     overlay_akshare_realtime_for_funds, build_akshare_addable_funds,
+    fetch_akshare_fund_name_lookup,
 )
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -64,6 +66,7 @@ DATA_REFRESH_BATCH_SAVE_SIZE = _env_int("DATA_REFRESH_BATCH_SAVE_SIZE", 30, 1, 2
 DATA_FETCH_HTTP_LIMIT = _env_int("DATA_FETCH_HTTP_LIMIT", max(16, DATA_REFRESH_CONCURRENCY * 8), 4, 200)
 WECHAT_STATUS_FALLBACK_CONCURRENCY = _env_int("WECHAT_STATUS_FALLBACK_CONCURRENCY", 8, 1, 24)
 AKSHARE_AUTO_ADD_NON_ETF_FUNDS_ENV = "AKSHARE_AUTO_ADD_NON_ETF_FUNDS"
+AKSHARE_REFRESH_FUND_METADATA_ENV = "AKSHARE_REFRESH_FUND_METADATA"
 
 
 def _make_http_connector(limit: int | None = None) -> aiohttp.TCPConnector:
@@ -442,7 +445,7 @@ async def _apply_valuation_model(session: aiohttp.ClientSession, fund: dict, dat
         if data.get("akshare_premium_rate") is not None:
             data["premium_rate"] = round(float(data.get("akshare_premium_rate") or 0), 2)
             data["premium_source"] = data.get("premium_source") or data.get("akshare_source") or "akshare.fund_etf_spot_em:f402_基金折价率取反为折溢价率"
-        data["model_version"] = "净值估值模型优化v2.6L"
+        data["model_version"] = "净值估值模型优化v2.7L"
         data["valuation_method"] = "akshare_fund_etf_spot_em_iopv"
         data["valuation_confidence"] = 0.9
         data["valuation_note"] = "优先使用 AkShare fund_etf_spot_em：f441=IOPV实时估值；f402=基金折价率，已取反为折溢价率"
@@ -452,7 +455,7 @@ async def _apply_valuation_model(session: aiohttp.ClientSession, fund: dict, dat
     estimate_source_text = f"{data.get('estimate_source', '')};{data.get('akshare_source', '')}"
     if source_estimated_nav > 0 and "akshare.fund_value_estimation_em" in estimate_source_text:
         data["estimated_nav"] = round(source_estimated_nav, 4)
-        data["model_version"] = "净值估值模型优化v2.6L"
+        data["model_version"] = "净值估值模型优化v2.7L"
         data["valuation_method"] = "akshare_fund_value_estimation_em"
         data["valuation_confidence"] = 0.85
         data["valuation_note"] = "优先使用 AkShare fund_value_estimation_em 净值估算；缺失时才回退本地估值模型"
@@ -479,7 +482,7 @@ async def _persist_fetched_holdings(fund_code: str, data: dict) -> None:
 
     Fast quote refreshes primarily use cached holdings.  Rewriting those cached
     rows on every 5-minute Actions cycle adds SQLite I/O without changing data,
-    so v2.6L writes holdings only when a fetch actually returned fresh rows.
+    so v2.7L writes holdings only when a fetch actually returned fresh rows.
     """
     if data.get("_holdings_fetched") and data.get("holdings"):
         await save_holdings(fund_code, data["holdings"])
@@ -494,7 +497,7 @@ async def _persist_fetched_holdings(fund_code: str, data: dict) -> None:
 async def seed_akshare_addable_non_etf_funds(*, respect_env: bool = True) -> int:
     """Add non-ETF funds that AkShare can monitor with direct premium and estimate data.
 
-    v2.6L keeps the existing default_funds.json path intact, then supplements it
+    v2.7L keeps the existing default_funds.json path intact, then supplements it
     from AkShare at runtime.  A fund is added only if the AkShare snapshot contains
     both a direct non-ETF exchange-table discount rate and a direct estimated NAV.
     Set AKSHARE_AUTO_ADD_NON_ETF_FUNDS=0 to disable this startup sync.
@@ -528,6 +531,30 @@ async def seed_akshare_addable_non_etf_funds(*, respect_env: bool = True) -> int
         return len(new_funds)
     except Exception as exc:
         logger.warning("AkShare non-ETF auto-add failed; startup continues: %s", exc)
+        return 0
+
+
+async def refresh_fund_metadata_from_akshare(*, respect_env: bool = True) -> int:
+    """Enrich weak spreadsheet-imported fund metadata with AkShare fund_name_em.
+
+    fundDataList.xls gives code/name/manager, but not the fund type used for
+    category inference.  This non-blocking runtime enrichment uses the same
+    EastMoney endpoint as AkShare's fund_name_em method and only updates weak
+    placeholder fields, so curated default funds and manual settings stay intact.
+    """
+    if respect_env and not _env_enabled(AKSHARE_REFRESH_FUND_METADATA_ENV, True):
+        logger.info("AkShare fund metadata refresh skipped: %s disabled", AKSHARE_REFRESH_FUND_METADATA_ENV)
+        return 0
+    try:
+        async with aiohttp.ClientSession() as session:
+            lookup = await fetch_akshare_fund_name_lookup(session)
+        if not lookup:
+            return 0
+        changed = await update_fund_metadata_from_lookup(lookup)
+        logger.info("AkShare fund metadata refresh completed: lookup=%s changed=%s", len(lookup), changed)
+        return changed
+    except Exception as exc:
+        logger.warning("AkShare fund metadata refresh failed; startup continues: %s", exc)
         return 0
 
 async def update_single_fund(fund_code: str, market: str = "sz"):
@@ -1453,19 +1480,20 @@ def _format_push_percent(value: float) -> str:
     return f"{value:g}%"
 
 
-def _build_threshold_alert_title(values: dict, conditions: list) -> str:
-    """Build the only scheduled WeChat push title for v2.6L.
-
-    Example: LOF折溢价告警 溢价3% 成交60万
-    """
-    title_parts = ["LOF折溢价告警"]
+def _build_threshold_alert_title(values: dict, conditions: list, alert_count: int = 0, monitor_total: int = 0) -> str:
+    """Build the scheduled WeChat push title with compact visual grouping."""
+    title_parts = ["【LOF监控】折溢价告警"]
+    if monitor_total > 0:
+        title_parts.append(f"命中{alert_count}只/监控{monitor_total}只")
+    elif alert_count > 0:
+        title_parts.append(f"命中{alert_count}只")
     if "premium_upper" in conditions:
-        title_parts.append(f"溢价{_format_push_percent(values['premium_upper'])}")
+        title_parts.append(f"溢价≥{_format_push_percent(values['premium_upper'])}")
     if "discount_lower" in conditions:
-        title_parts.append(f"折价{_format_push_percent(values['discount_lower'])}")
+        title_parts.append(f"折价≤{_format_push_percent(values['discount_lower'])}")
     if values["min_turnover"] > 0:
-        title_parts.append(f"成交{values['min_turnover']:g}万")
-    return " ".join(title_parts)
+        title_parts.append(f"成交≥{values['min_turnover']:g}万")
+    return "｜".join(title_parts)
 
 
 async def _ensure_alert_purchase_statuses(alerts: list[dict]) -> None:
@@ -1565,18 +1593,23 @@ async def check_threshold_alerts(config: dict = None) -> dict:
             )
             return {"success": True, "sent": False, "msg": "满足阈值的基金均因申购/赎回暂停被剔除", "count": 0}
         conditions = _triggered_conditions(alerts)
+        try:
+            monitor_total = len(await get_all_funds())
+        except Exception:
+            monitor_total = len(funds)
 
-        # v2.6L: automatic WeChat push sends exactly one threshold-alert message
+        # v2.7L: automatic WeChat push sends exactly one threshold-alert message
         # with a compact title such as "LOF折溢价告警 溢价3% 折价-5% 成交60万".
         # The condition list is rebuilt after paused申购/赎回 filtering so the title
         # and body describe only the remaining actionable alerts.
-        title = _build_threshold_alert_title(values, conditions)
+        title = _build_threshold_alert_title(values, conditions, len(alerts), monitor_total)
         content = build_threshold_alert_message(
             alerts,
             values["premium_upper"],
             values["discount_lower"],
             values["min_turnover"],
             conditions,
+            monitor_total,
         )
         result = await send_wechat_message(send_key, title, content)
         if result["success"]:
@@ -1594,7 +1627,7 @@ async def check_threshold_alerts(config: dict = None) -> dict:
 
 
 async def periodic_wechat_push():
-    """Automatic WeChat alert task for v2.6L.
+    """Automatic WeChat alert task for v2.7L.
 
     Strict rules:
     1. Only the configured push_time values are allowed to trigger a push.
@@ -2071,13 +2104,13 @@ async def api_save_wechat_config(request):
 
 
 async def api_test_wechat_push(request):
-    """v2.6L keeps this route as a no-op so no extra WeChat messages are sent."""
-    return web.json_response({"code": -1, "msg": "v2.6L 已取消测试推送；微信只在设置时间发送 1 条 LOF折溢价告警"})
+    """v2.7L keeps this route as a no-op so no extra WeChat messages are sent."""
+    return web.json_response({"code": -1, "msg": "v2.7L 已取消测试推送；微信只在设置时间发送 1 条 LOF折溢价告警"})
 
 
 async def api_send_summary_now(request):
-    """v2.6L removes summary pushes; keep this route as a safe no-op for compatibility."""
-    return web.json_response({"code": -1, "msg": "v2.6L 已取消汇总推送；自动微信推送只在设置时间发送 1 条 LOF折溢价告警"})
+    """v2.7L removes summary pushes; keep this route as a safe no-op for compatibility."""
+    return web.json_response({"code": -1, "msg": "v2.7L 已取消汇总推送；自动微信推送只在设置时间发送 1 条 LOF折溢价告警"})
 
 
 # ============ Static File Serving ============
@@ -2094,6 +2127,7 @@ async def admin(request):
 async def on_startup(app):
     await init_db()
     await seed_default_funds()
+    await refresh_fund_metadata_from_akshare()
     await seed_akshare_addable_non_etf_funds()
     app['update_task'] = asyncio.create_task(periodic_update())
     if _running_in_github_actions() and not _env_enabled("ACTIONS_REFRESH_HOLDINGS"):
