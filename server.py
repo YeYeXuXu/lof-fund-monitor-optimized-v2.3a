@@ -30,7 +30,7 @@ from wechat_push import send_wechat_message, build_threshold_alert_message, mask
 from akshare_fund_adapter import (
     get_akshare_fund_snapshot, apply_akshare_fund_data_to_result,
     overlay_akshare_realtime_for_funds, build_akshare_addable_funds,
-    fetch_akshare_fund_name_lookup,
+    fetch_akshare_fund_name_lookup, fetch_akshare_exchange_fund_status,
 )
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -91,6 +91,31 @@ def _running_in_github_actions() -> bool:
 
 def _status_missing(value: object) -> bool:
     return str(value or "").strip() in {"", "未知", "-", "--", "---"}
+
+
+def _merge_purchase_status_fields(target: dict, status: dict | None, default_source: str) -> bool:
+    """Merge known purchase/redeem fields into a fund result or alert row."""
+    if not status:
+        return False
+    changed = False
+    if not _status_missing(status.get("purchase_status")):
+        target["purchase_status"] = status.get("purchase_status", "未知")
+        changed = True
+    if not _status_missing(status.get("redeem_status")):
+        target["redeem_status"] = status.get("redeem_status", "未知")
+        changed = True
+    nav = _as_float(status.get("nav"), 0.0)
+    if nav > 0 and _as_float(target.get("nav"), 0.0) <= 0:
+        target["nav"] = nav
+        target["nav_source"] = status.get("source") or default_source
+        if status.get("nav_date"):
+            target["nav_date"] = status.get("nav_date", "")
+    shares = _as_float(status.get("yesterday_purchase_shares"), 0.0)
+    if shares > 0:
+        target["yesterday_purchase_shares"] = shares
+    if changed:
+        target["status_source"] = status.get("status_source") or status.get("source") or default_source
+    return changed
 
 
 def _describe_fund_data_sources(data: dict) -> str:
@@ -445,7 +470,7 @@ async def _apply_valuation_model(session: aiohttp.ClientSession, fund: dict, dat
         if data.get("akshare_premium_rate") is not None:
             data["premium_rate"] = round(float(data.get("akshare_premium_rate") or 0), 2)
             data["premium_source"] = data.get("premium_source") or data.get("akshare_source") or "akshare.fund_etf_spot_em:f402_基金折价率取反为折溢价率"
-        data["model_version"] = "净值估值模型优化v2.7L"
+        data["model_version"] = "净值估值模型优化v2.8L"
         data["valuation_method"] = "akshare_fund_etf_spot_em_iopv"
         data["valuation_confidence"] = 0.9
         data["valuation_note"] = "优先使用 AkShare fund_etf_spot_em：f441=IOPV实时估值；f402=基金折价率，已取反为折溢价率"
@@ -455,7 +480,7 @@ async def _apply_valuation_model(session: aiohttp.ClientSession, fund: dict, dat
     estimate_source_text = f"{data.get('estimate_source', '')};{data.get('akshare_source', '')}"
     if source_estimated_nav > 0 and "akshare.fund_value_estimation_em" in estimate_source_text:
         data["estimated_nav"] = round(source_estimated_nav, 4)
-        data["model_version"] = "净值估值模型优化v2.7L"
+        data["model_version"] = "净值估值模型优化v2.8L"
         data["valuation_method"] = "akshare_fund_value_estimation_em"
         data["valuation_confidence"] = 0.85
         data["valuation_note"] = "优先使用 AkShare fund_value_estimation_em 净值估算；缺失时才回退本地估值模型"
@@ -482,7 +507,7 @@ async def _persist_fetched_holdings(fund_code: str, data: dict) -> None:
 
     Fast quote refreshes primarily use cached holdings.  Rewriting those cached
     rows on every 5-minute Actions cycle adds SQLite I/O without changing data,
-    so v2.7L writes holdings only when a fetch actually returned fresh rows.
+    so v2.8L writes holdings only when a fetch actually returned fresh rows.
     """
     if data.get("_holdings_fetched") and data.get("holdings"):
         await save_holdings(fund_code, data["holdings"])
@@ -497,7 +522,7 @@ async def _persist_fetched_holdings(fund_code: str, data: dict) -> None:
 async def seed_akshare_addable_non_etf_funds(*, respect_env: bool = True) -> int:
     """Add non-ETF funds that AkShare can monitor with direct premium and estimate data.
 
-    v2.7L keeps the existing default_funds.json path intact, then supplements it
+    v2.8L keeps the existing default_funds.json path intact, then supplements it
     from AkShare at runtime.  A fund is added only if the AkShare snapshot contains
     both a direct non-ETF exchange-table discount rate and a direct estimated NAV.
     Set AKSHARE_AUTO_ADD_NON_ETF_FUNDS=0 to disable this startup sync.
@@ -895,21 +920,24 @@ async def _fetch_fund_data_with_session(
 
     # 5) Purchase/redeem status: AkShare fund_purchase_em batch snapshot has
     # already been applied above when available.  If it is missing or failed for
-    # this fund, fall back to the original per-fund EastMoney pages.
+    # this fund, try AkShare's per-fund exchange-traded fund detail endpoint
+    # first, then fall back to the original per-fund EastMoney pages.
     status_missing = _status_missing(result.get("purchase_status")) or _status_missing(result.get("redeem_status"))
     fetch_status = status_missing or refresh_holdings or _env_enabled("ACTIONS_FETCH_PURCHASE_STATUS")
     if fetch_status:
-        try:
-            status = await fetch_fund_purchase_status(session, fund_code)
-            if not _status_missing(status.get("purchase_status")):
-                result["purchase_status"] = status.get("purchase_status", "未知")
-            if not _status_missing(status.get("redeem_status")):
-                result["redeem_status"] = status.get("redeem_status", "未知")
-            result["yesterday_purchase_shares"] = status.get("yesterday_purchase_shares", 0)
-            if not _status_missing(result.get("purchase_status")) or not _status_missing(result.get("redeem_status")):
-                result["status_source"] = status.get("status_source", "original.eastmoney.f10_or_fund_page")
-        except Exception as exc:
-            logger.debug("Purchase/redeem status fallback failed for %s: %s", fund_code, exc)
+        if status_missing:
+            try:
+                akshare_status = await fetch_akshare_exchange_fund_status(session, fund_code)
+                if _merge_purchase_status_fields(result, akshare_status, "akshare.fund_etf_fund_info_em"):
+                    status_missing = _status_missing(result.get("purchase_status")) or _status_missing(result.get("redeem_status"))
+            except Exception as exc:
+                logger.debug("AkShare per-fund status fallback failed for %s: %s", fund_code, exc)
+        if status_missing or refresh_holdings or _env_enabled("ACTIONS_FETCH_PURCHASE_STATUS"):
+            try:
+                status = await fetch_fund_purchase_status(session, fund_code)
+                _merge_purchase_status_fields(result, status, "original.eastmoney.f10_or_fund_page")
+            except Exception as exc:
+                logger.debug("Purchase/redeem status fallback failed for %s: %s", fund_code, exc)
 
     if refresh_holdings:
         try:
@@ -1487,10 +1515,13 @@ def _build_threshold_alert_title(values: dict, conditions: list, alert_count: in
         title_parts.append(f"命中{alert_count}只/监控{monitor_total}只")
     elif alert_count > 0:
         title_parts.append(f"命中{alert_count}只")
-    if "premium_upper" in conditions:
-        title_parts.append(f"溢价≥{_format_push_percent(values['premium_upper'])}")
+    threshold_parts = []
     if "discount_lower" in conditions:
-        title_parts.append(f"折价≤{_format_push_percent(values['discount_lower'])}")
+        threshold_parts.append(f"≤{_format_push_percent(values['discount_lower'])}")
+    if "premium_upper" in conditions:
+        threshold_parts.append(f"≥{_format_push_percent(values['premium_upper'])}")
+    if threshold_parts:
+        title_parts.append(f"折溢价（{' or '.join(threshold_parts)}）")
     if values["min_turnover"] > 0:
         title_parts.append(f"成交≥{values['min_turnover']:g}万")
     return "｜".join(title_parts)
@@ -1521,12 +1552,15 @@ async def _ensure_alert_purchase_statuses(alerts: list[dict]) -> None:
             return
         async with semaphore:
             try:
+                akshare_status = await fetch_akshare_exchange_fund_status(session, fund_code)
+                _merge_purchase_status_fields(item, akshare_status, "akshare.fund_etf_fund_info_em")
+                if not (_status_missing(item.get("purchase_status")) or _status_missing(item.get("redeem_status"))):
+                    return
+            except Exception as exc:
+                logger.debug("WeChat alert AkShare status fallback failed for %s: %s", fund_code, exc)
+            try:
                 status = await fetch_fund_purchase_status(session, fund_code)
-                if not _status_missing(status.get("purchase_status")):
-                    item["purchase_status"] = status["purchase_status"]
-                if not _status_missing(status.get("redeem_status")):
-                    item["redeem_status"] = status["redeem_status"]
-                item["status_source"] = status.get("status_source", "original.eastmoney.f10_or_fund_page")
+                _merge_purchase_status_fields(item, status, "original.eastmoney.f10_or_fund_page")
             except Exception as exc:
                 logger.debug("WeChat alert status fallback failed for %s: %s", fund_code, exc)
 
@@ -1598,8 +1632,8 @@ async def check_threshold_alerts(config: dict = None) -> dict:
         except Exception:
             monitor_total = len(funds)
 
-        # v2.7L: automatic WeChat push sends exactly one threshold-alert message
-        # with a compact title such as "LOF折溢价告警 溢价3% 折价-5% 成交60万".
+        # v2.8L: automatic WeChat push sends exactly one threshold-alert message
+        # with a compact title such as "LOF折溢价告警 折溢价（≤-5% or ≥3%） 成交60万".
         # The condition list is rebuilt after paused申购/赎回 filtering so the title
         # and body describe only the remaining actionable alerts.
         title = _build_threshold_alert_title(values, conditions, len(alerts), monitor_total)
@@ -1627,7 +1661,7 @@ async def check_threshold_alerts(config: dict = None) -> dict:
 
 
 async def periodic_wechat_push():
-    """Automatic WeChat alert task for v2.7L.
+    """Automatic WeChat alert task for v2.8L.
 
     Strict rules:
     1. Only the configured push_time values are allowed to trigger a push.
@@ -2104,13 +2138,13 @@ async def api_save_wechat_config(request):
 
 
 async def api_test_wechat_push(request):
-    """v2.7L keeps this route as a no-op so no extra WeChat messages are sent."""
-    return web.json_response({"code": -1, "msg": "v2.7L 已取消测试推送；微信只在设置时间发送 1 条 LOF折溢价告警"})
+    """v2.8L keeps this route as a no-op so no extra WeChat messages are sent."""
+    return web.json_response({"code": -1, "msg": "v2.8L 已取消测试推送；微信只在设置时间发送 1 条 LOF折溢价告警"})
 
 
 async def api_send_summary_now(request):
-    """v2.7L removes summary pushes; keep this route as a safe no-op for compatibility."""
-    return web.json_response({"code": -1, "msg": "v2.7L 已取消汇总推送；自动微信推送只在设置时间发送 1 条 LOF折溢价告警"})
+    """v2.8L removes summary pushes; keep this route as a safe no-op for compatibility."""
+    return web.json_response({"code": -1, "msg": "v2.8L 已取消汇总推送；自动微信推送只在设置时间发送 1 条 LOF折溢价告警"})
 
 
 # ============ Static File Serving ============
