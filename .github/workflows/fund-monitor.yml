@@ -1,4 +1,4 @@
-name: LOF Fund Monitor v2.3a 09:30-15:00 CST
+name: LOF Fund Monitor v2.3L 09:30-15:00 CST
 
 on:
   schedule:
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   monitor:
-    name: Run LOF monitor v2.3a until 15:00 CST
+    name: Run LOF monitor v2.3L until 15:00 CST
     runs-on: ubuntu-latest
     timeout-minutes: 340
 
@@ -40,7 +40,6 @@ jobs:
       ACTIONS_PUSH_GRACE_SECONDS: ${{ vars.ACTIONS_PUSH_GRACE_SECONDS }}
       ACTIONS_REFRESH_HOLDINGS: ${{ vars.ACTIONS_REFRESH_HOLDINGS }}
       ACTIONS_FETCH_PURCHASE_STATUS: ${{ vars.ACTIONS_FETCH_PURCHASE_STATUS }}
-      AUTO_ADD_AKSHARE_DIRECT_FUNDS: ${{ vars.AUTO_ADD_AKSHARE_DIRECT_FUNDS }}
       AKSHARE_FUND_CACHE_TTL: ${{ vars.AKSHARE_FUND_CACHE_TTL }}
       AKSHARE_FUND_HTTP_TIMEOUT: ${{ vars.AKSHARE_FUND_HTTP_TIMEOUT }}
       AKSHARE_FUND_HTTP_RETRIES: ${{ vars.AKSHARE_FUND_HTTP_RETRIES }}
