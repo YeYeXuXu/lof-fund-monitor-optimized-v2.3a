@@ -1,4 +1,4 @@
-name: LOF Fund Monitor v2.6L 09:30-15:00 CST
+name: LOF Fund Monitor v2.7L 09:30-15:00 CST
 
 on:
   schedule:
@@ -7,6 +7,10 @@ on:
 
   workflow_dispatch:
     inputs:
+      run_from:
+        description: '北京时间开始时间，例如 09:30；测试时可填 14:00'
+        required: false
+        default: '09:30'
       run_until:
         description: '北京时间结束时间，例如 15:00；测试时可填 14:20'
         required: false
@@ -21,7 +25,7 @@ concurrency:
 
 jobs:
   monitor:
-    name: Run LOF monitor v2.6L until 15:00 CST
+    name: Run LOF monitor v2.7L 09:30-15:00 CST
     runs-on: ubuntu-latest
     timeout-minutes: 340
 
@@ -50,6 +54,7 @@ jobs:
       DATA_REFRESH_BATCH_SAVE_SIZE: ${{ vars.DATA_REFRESH_BATCH_SAVE_SIZE }}
       FETCHER_REQUEST_CACHE_TTL: ${{ vars.FETCHER_REQUEST_CACHE_TTL }}
       WECHAT_STATUS_FALLBACK_CONCURRENCY: ${{ vars.WECHAT_STATUS_FALLBACK_CONCURRENCY }}
+      RUN_FROM: ${{ inputs.run_from || '09:30' }}
       RUN_UNTIL: ${{ inputs.run_until || '15:00' }}
 
     steps:
@@ -73,4 +78,4 @@ jobs:
 
       - name: Run monitor
         run: |
-          python scripts/run_actions_monitor.py --until "$RUN_UNTIL"
+          python scripts/run_actions_monitor.py --from "$RUN_FROM" --until "$RUN_UNTIL"
