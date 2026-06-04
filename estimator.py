@@ -33,7 +33,7 @@ from fetcher import (
 
 logger = logging.getLogger(__name__)
 
-MODEL_VERSION = "净值估值模型优化v2.3a"
+MODEL_VERSION = "净值估值模型优化v2.3L"
 
 # China Standard Time (UTC+8)
 CST = timezone(timedelta(hours=8))
