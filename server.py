@@ -1592,7 +1592,15 @@ async def check_threshold_alerts(config: dict = None) -> dict:
                 len(excluded_alerts),
             )
             return {"success": True, "sent": False, "msg": "满足阈值的基金均因申购/赎回暂停被剔除", "count": 0}
-        conditions = _triggered_conditions(alerts)
+            
+        triggered_conditions = _triggered_conditions(alerts)
+
+        configured_conditions = []
+        if values["premium_enabled"]:
+            configured_conditions.append("premium_upper")
+        if values["discount_enabled"]:
+            configured_conditions.append("discount_lower")
+        
         try:
             monitor_total = len(await get_all_funds())
         except Exception:
@@ -1602,13 +1610,13 @@ async def check_threshold_alerts(config: dict = None) -> dict:
         # with a compact title such as "LOF折溢价告警 溢价3% 折价-5% 成交60万".
         # The condition list is rebuilt after paused申购/赎回 filtering so the title
         # and body describe only the remaining actionable alerts.
-        title = _build_threshold_alert_title(values, conditions, len(alerts), monitor_total)
+        title = _build_threshold_alert_title(values, triggered_conditions, len(alerts), monitor_total)
         content = build_threshold_alert_message(
             alerts,
             values["premium_upper"],
             values["discount_lower"],
             values["min_turnover"],
-            conditions,
+            configured_conditions,
             monitor_total,
         )
         result = await send_wechat_message(send_key, title, content)
