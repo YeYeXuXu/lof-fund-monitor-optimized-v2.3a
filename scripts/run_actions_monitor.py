@@ -4,7 +4,7 @@
 The normal server.py entrypoint tries to open a browser, which is useful locally
 but unnecessary in GitHub Actions. This runner imports the app, starts it on
 127.0.0.1, lets the project's built-in periodic tasks run, and shuts down at
-15:00 Asia/Shanghai by default.  v2.7L also supports waiting for a custom
+15:00 Asia/Shanghai by default.  v2.8L also supports waiting for a custom
 start time when the workflow is launched manually with the Run workflow button.
 """
 from __future__ import annotations

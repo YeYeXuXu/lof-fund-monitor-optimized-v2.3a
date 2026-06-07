@@ -445,7 +445,7 @@ async def _apply_valuation_model(session: aiohttp.ClientSession, fund: dict, dat
         if data.get("akshare_premium_rate") is not None:
             data["premium_rate"] = round(float(data.get("akshare_premium_rate") or 0), 2)
             data["premium_source"] = data.get("premium_source") or data.get("akshare_source") or "akshare.fund_etf_spot_em:f402_基金折价率取反为折溢价率"
-        data["model_version"] = "净值估值模型优化v2.7L"
+        data["model_version"] = "净值估值模型优化v2.8L"
         data["valuation_method"] = "akshare_fund_etf_spot_em_iopv"
         data["valuation_confidence"] = 0.9
         data["valuation_note"] = "优先使用 AkShare fund_etf_spot_em：f441=IOPV实时估值；f402=基金折价率，已取反为折溢价率"
@@ -455,7 +455,7 @@ async def _apply_valuation_model(session: aiohttp.ClientSession, fund: dict, dat
     estimate_source_text = f"{data.get('estimate_source', '')};{data.get('akshare_source', '')}"
     if source_estimated_nav > 0 and "akshare.fund_value_estimation_em" in estimate_source_text:
         data["estimated_nav"] = round(source_estimated_nav, 4)
-        data["model_version"] = "净值估值模型优化v2.7L"
+        data["model_version"] = "净值估值模型优化v2.8L"
         data["valuation_method"] = "akshare_fund_value_estimation_em"
         data["valuation_confidence"] = 0.85
         data["valuation_note"] = "优先使用 AkShare fund_value_estimation_em 净值估算；缺失时才回退本地估值模型"
@@ -482,7 +482,7 @@ async def _persist_fetched_holdings(fund_code: str, data: dict) -> None:
 
     Fast quote refreshes primarily use cached holdings.  Rewriting those cached
     rows on every 5-minute Actions cycle adds SQLite I/O without changing data,
-    so v2.7L writes holdings only when a fetch actually returned fresh rows.
+    so v2.8L writes holdings only when a fetch actually returned fresh rows.
     """
     if data.get("_holdings_fetched") and data.get("holdings"):
         await save_holdings(fund_code, data["holdings"])
@@ -497,7 +497,7 @@ async def _persist_fetched_holdings(fund_code: str, data: dict) -> None:
 async def seed_akshare_addable_non_etf_funds(*, respect_env: bool = True) -> int:
     """Add non-ETF funds that AkShare can monitor with direct premium and estimate data.
 
-    v2.7L keeps the existing default_funds.json path intact, then supplements it
+    v2.8L keeps the existing default_funds.json path intact, then supplements it
     from AkShare at runtime.  A fund is added only if the AkShare snapshot contains
     both a direct non-ETF exchange-table discount rate and a direct estimated NAV.
     Set AKSHARE_AUTO_ADD_NON_ETF_FUNDS=0 to disable this startup sync.
@@ -1394,16 +1394,22 @@ def _alert_blocked_by_status(fund: dict) -> tuple[bool, str]:
     premium = fund.get("premium_rate", 0) or 0
     threshold_type = fund.get("threshold_type", "")
     if threshold_type == "premium_upper" or premium > 0:
-        if _is_paused_status(fund.get("purchase_status")):
+        purchase_status = fund.get("purchase_status")
+        if _status_missing(purchase_status):
+            return True, "溢价基金申购状态未知"
+        if _is_paused_status(purchase_status):
             return True, "溢价基金申购暂停"
     if threshold_type == "discount_lower" or premium < 0:
-        if _is_paused_status(fund.get("redeem_status")):
+        redeem_status = fund.get("redeem_status")
+        if _status_missing(redeem_status):
+            return True, "折价基金赎回状态未知"
+        if _is_paused_status(redeem_status):
             return True, "折价基金赎回暂停"
     return False, ""
 
 
 def _filter_actionable_alerts(alerts: list[dict]) -> tuple[list[dict], list[dict]]:
-    """Remove alerts that cannot be acted on due to paused申购/赎回 status."""
+    """Remove alerts that cannot be acted on due to paused/unknown申购/赎回 status."""
     kept: list[dict] = []
     excluded: list[dict] = []
     for item in alerts:
@@ -1606,7 +1612,7 @@ async def check_threshold_alerts(config: dict = None) -> dict:
         except Exception:
             monitor_total = len(funds)
 
-        # v2.7L: automatic WeChat push sends exactly one threshold-alert message
+        # v2.8L: automatic WeChat push sends exactly one threshold-alert message
         # with a compact title such as "LOF折溢价告警 溢价3% 折价-5% 成交60万".
         # The condition list is rebuilt after paused申购/赎回 filtering so the title
         # and body describe only the remaining actionable alerts.
@@ -1635,7 +1641,7 @@ async def check_threshold_alerts(config: dict = None) -> dict:
 
 
 async def periodic_wechat_push():
-    """Automatic WeChat alert task for v2.7L.
+    """Automatic WeChat alert task for v2.8L.
 
     Strict rules:
     1. Only the configured push_time values are allowed to trigger a push.
@@ -2112,13 +2118,13 @@ async def api_save_wechat_config(request):
 
 
 async def api_test_wechat_push(request):
-    """v2.7L keeps this route as a no-op so no extra WeChat messages are sent."""
-    return web.json_response({"code": -1, "msg": "v2.7L 已取消测试推送；微信只在设置时间发送 1 条 LOF折溢价告警"})
+    """v2.8L keeps this route as a no-op so no extra WeChat messages are sent."""
+    return web.json_response({"code": -1, "msg": "v2.8L 已取消测试推送；微信只在设置时间发送 1 条 LOF折溢价告警"})
 
 
 async def api_send_summary_now(request):
-    """v2.7L removes summary pushes; keep this route as a safe no-op for compatibility."""
-    return web.json_response({"code": -1, "msg": "v2.7L 已取消汇总推送；自动微信推送只在设置时间发送 1 条 LOF折溢价告警"})
+    """v2.8L removes summary pushes; keep this route as a safe no-op for compatibility."""
+    return web.json_response({"code": -1, "msg": "v2.8L 已取消汇总推送；自动微信推送只在设置时间发送 1 条 LOF折溢价告警"})
 
 
 # ============ Static File Serving ============

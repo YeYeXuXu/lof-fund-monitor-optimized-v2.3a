@@ -216,7 +216,7 @@ def _clean_akshare_fund_name(value: Any) -> str:
 
 
 def _is_etf_like(fund_name: Any, fund_type: Any = "") -> bool:
-    """Return True for ETF rows that should be excluded by v2.7L discovery."""
+    """Return True for ETF rows that should be excluded by v2.8L discovery."""
     text = f"{fund_name or ''} {fund_type or ''}".upper()
     compact = re.sub(r"\s+", "", text)
     return "ETF" in compact or "交易型开放式指数" in compact
@@ -821,7 +821,7 @@ async def fetch_akshare_exchange_daily_snapshot(
     """Fetch non-ETF exchange-traded fund rows with direct discount-rate data.
 
     This mirrors AkShare ``fund_etf_fund_daily_em`` but intentionally filters out
-    ETF rows.  The remaining rows are useful for v2.7L auto-add because the table
+    ETF rows.  The remaining rows are useful for v2.8L auto-add because the table
     supplies a direct ``折价率`` field, while ``fund_value_estimation_em`` supplies
     the direct estimated NAV.
     """
@@ -857,7 +857,7 @@ async def fetch_akshare_exchange_daily_snapshot(
 def build_akshare_addable_funds(snapshot: dict[str, Any] | None) -> list[dict[str, Any]]:
     """Build default-fund rows that can be monitored directly by AkShare.
 
-    Eligibility for v2.7L:
+    Eligibility for v2.8L:
     - appears in the non-ETF subset of AkShare ``fund_etf_fund_daily_em`` and has
       a direct ``折价率`` value;
     - also appears in ``fund_value_estimation_em`` with a positive estimated NAV;
