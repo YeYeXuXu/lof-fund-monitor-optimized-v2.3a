@@ -1,9 +1,11 @@
-name: LOF Fund Monitor v2.7L 09:30-15:00 CST
+name: LOF Fund Monitor v2.8L 09:30-15:00 CST Weekdays
 
 on:
   schedule:
-    # GitHub Actions cron uses UTC; 01:30 UTC = 09:30 Asia/Shanghai.
-    - cron: '30 1 * * *'
+    # Beijing time, Monday-Friday 09:30. GitHub Actions schedule uses cron syntax;
+    # timezone keeps the trigger unambiguous and avoids manual UTC conversion errors.
+    - cron: '30 9 * * 1-5'
+      timezone: Asia/Shanghai
 
   workflow_dispatch:
     inputs:
@@ -25,7 +27,7 @@ concurrency:
 
 jobs:
   monitor:
-    name: Run LOF monitor v2.7L 09:30-15:00 CST
+    name: Run LOF monitor v2.8L 09:30-15:00 CST Weekdays
     runs-on: ubuntu-latest
     timeout-minutes: 340
 
